@@ -8,84 +8,54 @@ import scala.io._
 import scala.collection.mutable.Queue
 
 abstract class Conversation(val recipent: String, val incoming: Queue[String], val out: BufferedWriter, val homeChannel: String) extends Runnable {
-  
+
   val random = new Random
-  
-    val helpMessage =
+
+  val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
- 
-Tämänhetkiset ominaisuudet
-!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
-!dice <x>d<y>     Heittää x kappaletta y-tahkoista noppaa.
-!planned          Tulostaa suunnittellut ominaisuudet.
-!changelog        Tulostaa viimeaikaiset muutokset.
-!bigredbutton     Elä kajoa.
-!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
- 
-Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-    
-    def findCommand(line: String) = {
-    line.split(":").last.dropWhile(_!='!').takeWhile(_!=' ').trim()
+
+			Tämänhetkiset ominaisuudet
+			!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
+			!dice <x>d<y>     Heittää x kappaletta y-tahkoista noppaa.
+			!planned          Tulostaa suunnittellut ominaisuudet.
+			!changelog        Tulostaa viimeaikaiset muutokset.
+			!bigredbutton     Elä kajoa.
+			!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
+
+			Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
+
+  def findCommand(line: String) = {
+    line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
 
   def run(): Unit = {
-    while(true){
-    val line = this.incoming.dequeue()
-        var nick = ""
-        var receivedFrom = ""
-        val dataSplit = line.split(":")
-         val command = findCommand(line)
-        if (line.contains("PRIVMSG")) {
-          nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(line)
-        }
-        val command = findCommand(line)
-        if (line.contains("PRIVMSG")) {
-          nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(line)
-        }
-        command match{
-          case "!answer" => this.eightBall(out,receivedFrom)
-          case "!dice" => this.dice(line, out, receivedFrom)
-          case "!keelover" => {sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!");return}
-          case "!help" => this.scroller(out, nick, helpMessage)
-          case "!terminate" => this.terminate(out, nick)
-          case "!bigredButton" => this.bigRedButton(out, nick)
-          case "!relay" => this.relay(out, line)
-          case "!opme" => this.opme(out, nick)
-          case _ =>
-        } else if (line.contains("!answer")) {
-            val message = this.eightBall
-            sendMessage(out, message, receivedFrom)
-        } else if (line.contains("!dice")) {
-            this.dice(line, out, receivedFrom)
-        } else if (line.contains("!keelover")) {
-            sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!")
-            return
-        } else if (line.contains("!help")) {
-            this.scroller(out, nick, helpMessage)
-        } else if (line.contains("!terminate")) {
-            this.terminate(out, dataSplit)
-        } else if (line.contains("!bigredbutton")) {
-            val nick = dataSplit(1).split("!")(0)
-            sendMessage(out, "You shouldn't have done that, " + nick + ".", nick)
-        } else if (line.contains('?')) {
-            if (random.nextInt(50) == 0) {
-            sendMessage(out, this.eightBall, receivedFrom)
-          }
-        } else if (line.contains("!relay")) {
-            this.relay(out, line)
-        } else if (line.contains("!opme")) {
-          sendData(out, "MODE " + this.homeChannel + " " + nick + " +o")
-        } else if (line.contains("!planned")) {
-          if (line.split("!planned ")(1)(0) == 'g') {
-            this.fileReader(out, this.homeChannel, "plannedVersions.txt")
-          } else {
-              this.fileReader(out, nick, "plannedVersions.txt")
-          }
-        } else if (line.contains("!changelog")) {
-            this.fileReader(out, nick, "changeLog.txt")
-        }
+    while (true) {
+      val line = this.incoming.dequeue()
+      var nick = ""
+      var receivedFrom = ""
+      val dataSplit = line.split(":")
+      if (line.contains("PRIVMSG")) {
+        nick = dataSplit(1).split("!")(0)
+        receivedFrom = this.address(line)
+      }
+      val command = findCommand(line)
+      if (line.contains("PRIVMSG")) {
+        nick = dataSplit(1).split("!")(0)
+        receivedFrom = this.address(line)
+      }
+      command match {
+        case "!answer" => this.eightBall(out, receivedFrom)
+        case "!dice" => this.dice(line, out, receivedFrom)
+        case "!keelover" => { sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!"); return }
+        case "!help" => this.scroller(out, nick, helpMessage)
+        case "!terminate" => this.terminate(out, nick)
+        case "!bigredButton" => this.bigRedButton(out, nick)
+        case "!relay" => this.relay(out, line)
+        case "!opme" => this.opme(out, nick)
+        case "!planned" => this.plannedFeatures(out, line, receivedFrom, nick)
+        case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
+        case _ =>
+      }
     }
   }
 
@@ -103,7 +73,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     sendData(out, toBeSent)
   }
 
-def address(line: String): String = {
+  def address(line: String): String = {
     var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
     if (recipent(0) == '#') {
       recipent
@@ -114,24 +84,24 @@ def address(line: String): String = {
   }
 
   def dice(line: String, out: BufferedWriter, receiver: String) {
-    if(line.split("!dice ").size >= 2){
-    val parameters = line.split("!dice ")(1).split('d')
-    var amount = 0
-    var faces = 0
-    val parameters1 = parameters(1)
-    val testi = parameters1.takeWhile(_ != ' ')
-    if (parameters(0).forall(_.isDigit) && parameters(0).length < 3) { amount = parameters(0).toInt }
-    if (testi.forall(_.isDigit) && testi.length < 5) { faces = testi.toInt }
-    if (amount == 0 || faces == 0) {
-      sendMessage(out, "Tarkasta syntaksi, !dice (noppien lukumäärä)d(tahkojen lukumäärä)", this.homeChannel)
-    } else {
-      var throwArray = Array.ofDim[Int](amount)
-      for (i <- throwArray.indices) {
-        throwArray(i) = random.nextInt(faces) + 1
-      }
-      val total = throwArray.sum
-      val message = "Heitit " + throwArray.mkString(" + ") + " = " + total + "!"
-      sendMessage(out, message, receiver)
+    if (line.split("!dice ").size >= 2) {
+      val parameters = line.split("!dice ")(1).split('d')
+      var amount = 0
+      var faces = 0
+      val parameters1 = parameters(1)
+      val testi = parameters1.takeWhile(_ != ' ')
+      if (parameters(0).forall(_.isDigit) && parameters(0).length < 3) { amount = parameters(0).toInt }
+      if (testi.forall(_.isDigit) && testi.length < 5) { faces = testi.toInt }
+      if (amount == 0 || faces == 0) {
+        sendMessage(out, "Tarkasta syntaksi, !dice (noppien lukumäärä)d(tahkojen lukumäärä)", this.homeChannel)
+      } else {
+        var throwArray = Array.ofDim[Int](amount)
+        for (i <- throwArray.indices) {
+          throwArray(i) = random.nextInt(faces) + 1
+        }
+        val total = throwArray.sum
+        val message = "Heitit " + throwArray.mkString(" + ") + " = " + total + "!"
+        sendMessage(out, message, receiver)
       }
     } else {
       sendMessage(out, "Unohtuivatko parametrit?", receiver)
@@ -149,7 +119,7 @@ def address(line: String): String = {
     val answer = answers((random.nextInt(answers.size)))
     sendMessage(out, answer, receivedFrom)
   }
-  
+
   def bigRedButton(out: BufferedWriter, nick: String) = {
     sendMessage(out, "You shouldn't have done that, " + nick + ".", nick)
   }
@@ -170,12 +140,20 @@ def address(line: String): String = {
   def relay(out: BufferedWriter, line: String) = {
     this.sendData(out, line.split("!relay ")(1))
   }
-  
+
   def opme(out: BufferedWriter, nick: String) = {
     sendData(out, "MODE " + this.homeChannel + " " + nick + " +o")
   }
 
-  def fileReader(out: BufferedWriter, receivedFrom: String, filename: String):Unit = synchronized {
+  def plannedFeatures(out: BufferedWriter, line: String, receivedFrom: String, nick: String) = {
+    if (line.split("!planned ")(1)(0) == 'g') {
+      this.fileReader(out, this.homeChannel, "plannedVersions.txt")
+    } else {
+      this.fileReader(out, nick, "plannedVersions.txt")
+    }
+  }
+
+  def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = synchronized {
     val file = Source.fromFile(filename)
     val lines = file.getLines.toVector
     try {
