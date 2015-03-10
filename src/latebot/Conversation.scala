@@ -30,31 +30,32 @@ abstract class Conversation(val recipent: String, val incoming: Queue[String], v
 
   def run(): Unit = {
     while (true) {
-      val line = this.incoming.dequeue()
-      var nick = ""
-      var receivedFrom = ""
-      val dataSplit = line.split(":")
-      if (line.contains("PRIVMSG")) {
-        nick = dataSplit(1).split("!")(0)
-        receivedFrom = this.address(line)
-      }
-      val command = findCommand(line)
-      if (line.contains("PRIVMSG")) {
-        nick = dataSplit(1).split("!")(0)
-        receivedFrom = this.address(line)
-      }
-      command match {
-        case "!answer" => this.eightBall(out, receivedFrom)
-        case "!dice" => this.dice(line, out, receivedFrom)
-        case "!keelover" => { sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!"); return }
-        case "!help" => this.scroller(out, nick, helpMessage)
-        case "!terminate" => this.terminate(out, nick)
-        case "!bigredButton" => this.bigRedButton(out, nick)
-        case "!relay" => this.relay(out, line)
-        case "!opme" => this.opme(out, nick)
-        case "!planned" => this.plannedFeatures(out, line, receivedFrom, nick)
-        case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
-        case _ =>
+      if (!this.incoming.isEmpty) {
+        val line = this.incoming.dequeue()
+        var nick = ""
+        var receivedFrom = ""
+        val dataSplit = line.split(":")
+        if (line.contains("PRIVMSG")) {
+          nick = dataSplit(1).split("!")(0)
+          receivedFrom = this.address(line)
+        }
+        val command = findCommand(line)
+        if (line.contains("PRIVMSG")) {
+          nick = dataSplit(1).split("!")(0)
+          receivedFrom = this.address(line)
+        }
+        command match {
+          case "!answer" => this.eightBall(out, receivedFrom)
+          case "!dice" => this.dice(line, out, receivedFrom)
+          case "!help" => this.scroller(out, nick, helpMessage)
+          case "!terminate" => this.terminate(out, nick)
+          case "!bigredButton" => this.bigRedButton(out, nick)
+          case "!relay" => this.relay(out, line)
+          case "!opme" => this.opme(out, nick)
+          case "!planned" => this.plannedFeatures(out, line, receivedFrom, nick)
+          case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
+          case _ =>
+        }
       }
     }
   }

@@ -13,8 +13,7 @@ class latebot {
   val ircBotDescription = ":All hail the new robot overlord!"
   val homeChannel = "#latenkatyrit"
   val random = new Random
-  val enemies = Buffer[String]()
-  val channelNicks = Buffer[String]()
+  val conversations = Buffer[(Conversation, Queue[String])]()
   val currentVersion = "0.4.1"
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -62,18 +61,35 @@ Ave, mundus!"""
     this.scroller(out, this.homeChannel, hello)
     this.autoBot(connect, out, in)
   }
+  
+   def findCommand(line: String) = {
+    line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
+  }
 
   def autoBot(connect: Socket, out: BufferedWriter, in: BufferedReader) {
     while (true) {
       val line = in.readLine()
       if (line != null) {
         if (!line.contains("PING")) { println(line) }
+        if (line.contains("PING")) {
+          pong(out, line)
+        } else if (line.contains("!keelover")) {
+            sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!")
+            return
+        }
         var nick = ""
         var receivedFrom = ""
         val dataSplit = line.split(":")
         if (line.contains("PRIVMSG")) {
           nick = dataSplit(1).split("!")(0)
           receivedFrom = this.address(line)
+        }
+        if(!this.conversations.find(_._1.recipent == receivedFrom).isDefined) {
+          // luo uusi queue (?)
+          // luo uusi keskustelu omaan säikeeseensä
+          // lisää conversations - kokoelmaan
+        } else {
+          // sijoita line keskustelua vastaavaan jonoon 
         }
         if (line.contains("PING")) {
           pong(out, line)
