@@ -23,16 +23,37 @@ Tämänhetkiset ominaisuudet
 !terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
+    
+    def findCommand(line: String) = {
+    line.split(":").last.dropWhile(_!='!').takeWhile(_!=' ').trim()
+  }
 
   def run(): Unit = {
+    while(true){
     val line = this.incoming.dequeue()
-        if (!line.contains("PING")) { println(line) }
         var nick = ""
         var receivedFrom = ""
         val dataSplit = line.split(":")
+         val command = findCommand(line)
         if (line.contains("PRIVMSG")) {
           nick = dataSplit(1).split("!")(0)
           receivedFrom = this.address(line)
+        }
+        val command = findCommand(line)
+        if (line.contains("PRIVMSG")) {
+          nick = dataSplit(1).split("!")(0)
+          receivedFrom = this.address(line)
+        }
+        command match{
+          case "!answer" => this.eightBall(out,receivedFrom)
+          case "!dice" => this.dice(line, out, receivedFrom)
+          case "!keelover" => {sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!");return}
+          case "!help" => this.scroller(out, nick, helpMessage)
+          case "!terminate" => this.terminate(out, nick)
+          case "!bigredButton" => this.bigRedButton(out, nick)
+          case "!relay" => this.relay(out, line)
+          case "!opme" => this.opme(out, nick)
+          case _ =>
         } else if (line.contains("!answer")) {
             val message = this.eightBall
             sendMessage(out, message, receivedFrom)
@@ -65,6 +86,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
         } else if (line.contains("!changelog")) {
             this.fileReader(out, nick, "changeLog.txt")
         }
+    }
   }
 
   def sendData(out: BufferedWriter, ircDataOutput: String) = {
@@ -120,15 +142,19 @@ def address(line: String): String = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
 
-  def eightBall = {
-    val vastaukset = Buffer[String]("Varmasti.", "Ei epäilystäkään.", "Ukkokin sanoisi niin.", "Bittini ennustavat niin.", "Kyllä, varmastikin.", "Voinet luottaa siihen.", "Näkökulmastani joo.", "Mitä todennäköisimmin.", "Siltä vaikuttaa.", "Kyllä.", "Niin minulle on kerrottu.",
+  def eightBall(out: BufferedWriter, receivedFrom: String) = {
+    val answers = Buffer[String]("Varmasti.", "Ei epäilystäkään.", "Ukkokin sanoisi niin.", "Bittini ennustavat niin.", "Kyllä, varmastikin.", "Voinet luottaa siihen.", "Näkökulmastani joo.", "Mitä todennäköisimmin.", "Siltä vaikuttaa.", "Kyllä.", "Niin minulle on kerrottu.",
       "Vastaus epävarma.", "Kysy myöhemmin uudestaan.", "En voi kertoa.", "Turvallisuusluokituksesti ei riitä vastauksen lukemiseen.", "Ennustuspiirit synkronoimatta.", "Keskity tarkemmin ja kysy uudestaan.", "Kenties",
       "Älä laske sen varaan.", "En luottaisi siihen.", "Ei.", "Lähteideni mukaan ei.", "Henget ovat epäsuotuisia.", "Epäilen.")
-    vastaukset(random.nextInt(vastaukset.size))
+    val answer = answers((random.nextInt(answers.size)))
+    sendMessage(out, answer, receivedFrom)
+  }
+  
+  def bigRedButton(out: BufferedWriter, nick: String) = {
+    sendMessage(out, "You shouldn't have done that, " + nick + ".", nick)
   }
 
-  def terminate(out: BufferedWriter, dataSplit: Array[String]) = {
-    val nick = dataSplit(1).split("!")(0)
+  def terminate(out: BufferedWriter, nick: String) = {
     sendData(out, "MODE " + nick + " -o")
     sendMessage(out, "Nick " + nick + ", prepate to be terminated.", this.homeChannel)
     sendMessage(out, "Terminating in 3...", this.homeChannel)
@@ -143,6 +169,10 @@ def address(line: String): String = {
 
   def relay(out: BufferedWriter, line: String) = {
     this.sendData(out, line.split("!relay ")(1))
+  }
+  
+  def opme(out: BufferedWriter, nick: String) = {
+    sendData(out, "MODE " + this.homeChannel + " " + nick + " +o")
   }
 
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String):Unit = synchronized {
