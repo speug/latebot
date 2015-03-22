@@ -7,7 +7,7 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-abstract class Conversation(val recipent: String, val incoming: Queue[String], val out: BufferedWriter, val homeChannel: String) extends Runnable {
+abstract class Conversation(val recipient: String, val incoming: Queue[(String,Int)], val out: BufferedWriter, val homeChannel: String) extends Runnable {
 
   val random = new Random
 
@@ -75,12 +75,12 @@ abstract class Conversation(val recipent: String, val incoming: Queue[String], v
   }
 
   def address(line: String): String = {
-    var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
-    if (recipent(0) == '#') {
-      recipent
+    var recipient = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
+    if (recipient(0) == '#') {
+      recipient
     } else {
-      recipent = line.split(":")(1).split("!")(0)
-      recipent
+      recipient = line.split(":")(1).split("!")(0)
+      recipient
     }
   }
 
