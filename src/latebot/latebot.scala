@@ -6,6 +6,7 @@ import scala.util.Random
 import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
+import scala.collection.mutable.Map
 
 class latebot {
 
@@ -13,7 +14,8 @@ class latebot {
   val ircBotDescription = ":All hail the new robot overlord!"
   val homeChannel = "#latenkatyrit"
   val random = new Random
-  val conversations = Buffer[(Conversation, Queue[String])]()
+  val conversations = Buffer[(Conversation, Queue[(Int,String)])]()
+  val blackList = Map[Chatter, Int]()
   val currentVersion = "0.4.1"
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -84,11 +86,13 @@ Ave, mundus!"""
           nick = dataSplit(1).split("!")(0)
           receivedFrom = this.address(line)
         }
-        if(!this.conversations.find(_._1.recipent == receivedFrom).isDefined) {
-          // luo uusi queue (?)
+        if(!this.conversations.find(_._1.recipient == receivedFrom).isDefined) {
+          //val messageQueue = new Queue[String]()
+          //val newConversation = if(receivedFrom(0) == "#"){new }
           // luo uusi keskustelu omaan säikeeseensä
           // lisää conversations - kokoelmaan
         } else {
+          //tsekkaa aika
           // sijoita line keskustelua vastaavaan jonoon 
         }
         if (line.contains("PING")) {
@@ -174,14 +178,14 @@ Ave, mundus!"""
   def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
-
+// Vastaa kysymyksiin
   def eightBall = {
     val vastaukset = Buffer[String]("Varmasti.", "Ei epäilystäkään.", "Ukkokin sanoisi niin.", "Bittini ennustavat niin.", "Kyllä, varmastikin.", "Voinet luottaa siihen.", "Näkökulmastani joo.", "Mitä todennäköisimmin.", "Siltä vaikuttaa.", "Kyllä.", "Niin minulle on kerrottu.",
       "Vastaus epävarma.", "Kysy myöhemmin uudestaan.", "En voi kertoa.", "Turvallisuusluokituksesti ei riitä vastauksen lukemiseen.", "Ennustuspiirit synkronoimatta.", "Keskity tarkemmin ja kysy uudestaan.", "Kenties",
       "Älä laske sen varaan.", "En luottaisi siihen.", "Ei.", "Lähteideni mukaan ei.", "Henget ovat epäsuotuisia.", "Epäilen.")
     vastaukset(random.nextInt(vastaukset.size))
   }
-
+// Terminoi käyttäjän, hihi
   def terminate(out: BufferedWriter, dataSplit: Array[String]) = {
     val nick = dataSplit(1).split("!")(0)
     sendData(out, "MODE " + nick + " -o")
@@ -195,11 +199,11 @@ Ave, mundus!"""
     sendMessage(out, "Hasta la vista, " + nick, this.homeChannel)
     sendData(out, "KICK " + this.homeChannel + " " + nick + " :You have been terminated.")
   }
-
+// Välittää viestin sellaisenaan serverille
   def relay(out: BufferedWriter, line: String) = {
     this.sendData(out, line.split("!relay ")(1))
   }
-
+// lukee filuja (tällä hetkellä changelog ja plannedversions
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String) = {
     val file = Source.fromFile(filename)
     val lines = file.getLines.toVector
@@ -208,6 +212,34 @@ Ave, mundus!"""
     } finally {
       file.close()
     }
+  }
+  
+  def spam(where: Conversation, who: String, out: BufferedWriter) = {
+    if(this.blackList.keys.find(_.nick == who).isDefined){
+      val spammer = this.blackList.keys.find(_.nick == who).get
+      this.blackList(spammer) += 1
+      blackList(spammer) match {
+        case 0 =>
+        case 1 => this.warnSpammer(spammer.nick, out)
+        case 2 => this.kickSpammer(where.recipient, spammer.nick, out)
+        case _ => this.kickBan(where.recipient, who, out)
+      }
+    }
+  }
+  
+  def warnSpammer(nick: String, out: BufferedWriter) = {
+    val message = "Cease the spam, " + nick + "."
+    this.sendMessage(out, message, nick)
+  }
+  
+  def kickSpammer(channel: String, nick: String, out: BufferedWriter) = {
+    this.sendData(out, "KICK " + channel + nick + " :You need to chill, " + nick + ".")
+  }
+  
+  def kickBan(channel: String, nick: String, out: BufferedWriter) = {
+    this.sendData(out, "MODE " + nick + " -o")
+    this.sendData(out, "KICK " + channel + nick + " :You need to chill, " + nick + ".")
+    this.sendData(out, "MODE " + nick + " +b")
   }
 
   def main(cmd: Array[String]) {

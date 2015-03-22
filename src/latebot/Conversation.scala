@@ -7,9 +7,10 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-abstract class Conversation(val recipient: String, val incoming: Queue[(String,Int)], val out: BufferedWriter, val homeChannel: String) extends Runnable {
+abstract class Conversation(val recipient: String, val incoming: Queue[(Int,String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot) extends Runnable {
 
-  val random = new Random
+  private val random = new Random
+  private val history = new Queue[(Int,String)]
 
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -31,7 +32,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(String,I
   def run(): Unit = {
     while (true) {
       if (!this.incoming.isEmpty) {
-        val line = this.incoming.dequeue()
+        val line = this.incoming.dequeue()._2
         var nick = ""
         var receivedFrom = ""
         val dataSplit = line.split(":")
@@ -162,5 +163,9 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(String,I
     } finally {
       file.close()
     }
+  }
+  
+  def isChannel = {
+    this.recipient(0) == '#'
   }
 }
