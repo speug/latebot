@@ -213,37 +213,17 @@ Ave, mundus!"""
       file.close()
     }
   }
-  
-  def spam(where: Conversation, who: String, out: BufferedWriter) = {
-    if(this.blackList.keys.find(_.nick == who).isDefined){
-      val spammer = this.blackList.keys.find(_.nick == who).get
-      this.blackList(spammer) += 1
-      blackList(spammer) match {
-        case 0 =>
-        case 1 => this.warnSpammer(spammer.nick, out)
-        case 2 => this.kickSpammer(where.recipient, spammer.nick, out)
-        case _ => this.kickBan(where.recipient, who, out)
-      }
-    }
-  }
-  
-  def warnSpammer(nick: String, out: BufferedWriter) = {
-    val message = "Cease the spam, " + nick + "."
-    this.sendMessage(out, message, nick)
-  }
-  
-  def kickSpammer(channel: String, nick: String, out: BufferedWriter) = {
-    this.sendData(out, "KICK " + channel + nick + " :You need to chill, " + nick + ".")
-  }
-  
-  def kickBan(channel: String, nick: String, out: BufferedWriter) = {
-    this.sendData(out, "MODE " + nick + " -o")
-    this.sendData(out, "KICK " + channel + nick + " :You need to chill, " + nick + ".")
-    this.sendData(out, "MODE " + nick + " +b")
-  }
 
   def main(cmd: Array[String]) {
     connect("irc.cs.hut.fi", 6668)
   }
+  
+  def addToBlackList(spammer: Chatter): Unit = {
+     if(this.blackList.keys.find(_ == spammer).isDefined){
+     this.blackList(spammer) += 1
+     } else {
+     this.blackList += spammer -> 1
+  }
+}
 
 }

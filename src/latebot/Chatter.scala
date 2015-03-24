@@ -7,28 +7,21 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-class Chatter(val nick: String, val channel: Channel) {
+class Chatter(val nick: String, val conversation: Conversation) {
 
   private val messageHistory = new Queue[(Int, String)]()
 
-  def takeLine(line: (Int, String)) = {
+  def takeLine(line: (Int, String)): Unit = {
     if (this.messageHistory.size <= 10) {
       this.messageHistory += line
     } else {
-      this.messageHistory.dequeue()
+      val toRemove = this.messageHistory.dequeue()
       this.messageHistory += line
-
     }
   }
 
   def isSpam(line: (Int, String)) = {
-    if (this.messageHistory.filter(_._2 == line._2).size >= 5) {
-      true
-    } else if (this.isTooFrequent(line._1)) {
-      true
-    } else {
-      false
-    }
+  (this.isTooFrequent(line._1) || (this.messageHistory.filter(_._2 == line._2).size >= 5))
   }
 
   def isTooFrequent(line: (Int)) = {

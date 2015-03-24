@@ -32,28 +32,30 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Int,Stri
   def run(): Unit = {
     while (true) {
       if (!this.incoming.isEmpty) {
-        val line = this.incoming.dequeue()._2
+        val line = this.incoming.dequeue()
+        val lineString = line._2
         var nick = ""
         var receivedFrom = ""
-        val dataSplit = line.split(":")
-        if (line.contains("PRIVMSG")) {
+        val dataSplit = lineString.split(":")
+        if (lineString.contains("PRIVMSG")) {
           nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(line)
+          receivedFrom = this.address(lineString)
         }
-        val command = findCommand(line)
-        if (line.contains("PRIVMSG")) {
+        this.takeLine(line, nick)
+        val command = findCommand(lineString)
+        if (lineString.contains("PRIVMSG")) {
           nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(line)
+          receivedFrom = this.address(lineString)
         }
         command match {
           case "!answer" => this.eightBall(out, receivedFrom)
-          case "!dice" => this.dice(line, out, receivedFrom)
+          case "!dice" => this.dice(lineString, out, receivedFrom)
           case "!help" => this.scroller(out, nick, helpMessage)
           case "!terminate" => this.terminate(out, nick)
           case "!bigredButton" => this.bigRedButton(out, nick)
-          case "!relay" => this.relay(out, line)
+          case "!relay" => this.relay(out, lineString)
           case "!opme" => this.opme(out, nick)
-          case "!planned" => this.plannedFeatures(out, line, receivedFrom, nick)
+          case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
           case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
           case _ =>
         }
@@ -168,4 +170,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Int,Stri
   def isChannel = {
     this.recipient(0) == '#'
   }
+  
+  def takeLine(line: (Int,String), nick: String): Unit
+  
 }

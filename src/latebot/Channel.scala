@@ -11,7 +11,7 @@ class Channel(recipient: String, incoming: Queue[(Int, String)], out: BufferedWr
 
   private val chatters = Buffer[Chatter]()
   
-  def takeLine(line: (Int,String), nick: String) = {
+  def takeLine(line: (Int,String), nick: String): Unit = {
     if(!this.chatters.find(_.nick == nick).isDefined){
       val newChatter = new Chatter(nick, this)
       this.chatters += newChatter
@@ -25,11 +25,7 @@ class Channel(recipient: String, incoming: Queue[(Int, String)], out: BufferedWr
   }
     
    def spam(who: Chatter, out: BufferedWriter) = { 
-     if(this.bot.blackList.keys.find(_ == who).isDefined){
-     this.bot.blackList(spammer.get) += 1
-     } else {
-     this.bot.blackList += who -> 1
-   }
+   this.bot.addToBlackList(who)
    this.bot.blackList(who) match {
      case 0 =>
      case 1 => this.warnSpammer(who.nick, out)
