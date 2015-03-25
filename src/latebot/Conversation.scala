@@ -7,10 +7,9 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-abstract class Conversation(val recipient: String, val incoming: Queue[(Int,String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot) extends Runnable {
+abstract class Conversation(val recipient: String, val incoming: Queue[(Long,String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot, val historySize: Int, val messageHistory: Queue[(Long, String)]) extends Runnable {
 
   private val random = new Random
-  private val history = new Queue[(Int,String)]
 
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -75,6 +74,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Int,Stri
   def sendMessage(out: BufferedWriter, message: String, receiver: String) = {
     val toBeSent = "PRIVMSG " + receiver + " :" + message
     sendData(out, toBeSent)
+    this.messageHistory += ((System.currentTimeMillis(), toBeSent)) 
   }
 
   def address(line: String): String = {
@@ -167,10 +167,26 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Int,Stri
     }
   }
   
+  def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = synchronized {
+  //asd
+  }
+  
   def isChannel = {
     this.recipient(0) == '#'
   }
   
-  def takeLine(line: (Int,String), nick: String): Unit
+  def addToHistory(line: (Long, String)) = {
+    if(this.messageHistory.size >= this.historySize){
+      this.messageHistory.dequeue()
+    }
+    this.messageHistory += line
+  }
+  
+  def lastMessage = {
+    this.messageHistory(this.messageHistory.size - 1)
+  }
+
+  
+  def takeLine(line: (Long, String), nick: String): Unit
   
 }

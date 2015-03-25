@@ -9,9 +9,9 @@ import scala.collection.mutable.Queue
 
 class Chatter(val nick: String, val conversation: Conversation) {
 
-  private val messageHistory = new Queue[(Int, String)]()
+  private val messageHistory = new Queue[(Long, String)]()
 
-  def takeLine(line: (Int, String)): Unit = {
+  def takeLine(line: (Long, String)): Unit = {
     if (this.messageHistory.size <= 10) {
       this.messageHistory += line
     } else {
@@ -19,18 +19,26 @@ class Chatter(val nick: String, val conversation: Conversation) {
       this.messageHistory += line
     }
   }
-
-  def isSpam(line: (Int, String)) = {
-  (this.isTooFrequent(line._1) || (this.messageHistory.filter(_._2 == line._2).size >= 5))
+  
+  def hostmask = {
+    this.messageHistory(0)._2.dropWhile(_ == ':').takeWhile(_ != ' ')
   }
 
-  def isTooFrequent(line: (Int)) = {
-    val times = Buffer[Int]()
+  def isSpam(line: (Long, String)) = {
+  (this.isTooFrequent(line._1) || (this.messageHistory.filter((historyLine: (Long, String)) => historyLine._2 == line._2 && !historyLine._2.split(":").contains('!')).size >= 5))
+  }
+
+  def isTooFrequent(line: (Long)) = {
+    val times = Buffer[Long]()
     for (i <- 1 until this.messageHistory.size) {
       times += this.messageHistory(i)._1 - this.messageHistory(i - 1)._1
     }
     times += line - this.messageHistory(this.messageHistory.size - 1)._1
     times.filter(_ <= 3000).size > 5
+  }
+  
+  def flushQueue = {
+    this.messageHistory.clear()
   }
 
 }

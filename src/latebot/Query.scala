@@ -7,26 +7,20 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-class Query(recipient: String, incoming: Queue[(Int, String)], out: BufferedWriter, homeChannel: String, bot: latebot) extends Conversation(recipient, incoming, out, homeChannel, bot)  {
+class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWriter, homeChannel: String, bot: latebot, historySize: Int, messageHistory: Queue[(Long, String)]) extends Conversation(recipient, incoming, out, homeChannel, bot, historySize, messageHistory)  {
   
-  private val messageHistory = new Queue[(Int, String)]()
+  private val chatter = new Chatter(recipient, this)
 
-  def takeLine(line:(Int,String), nick: String) = {
-    if(this.messageHistory.size <= 10){
-      this.messageHistory += line
-    } else {
-      this.messageHistory.dequeue()
-      this.messageHistory += line
+  def takeLine(line:(Long,String), nick: String) = {
+    this.addToHistory(line)
       if(this.isSpammed(line._1)){
-        val spammer = new Chatter(nick, this)
-        this.bot.addToBlackList(spammer)
-        this.spam(spammer, out)
+        this.bot.addToBlackList(this.chatter)
+        this.spam(this.chatter, out)
       }
-    }
   }
   
-  def isSpammed(line: (Int)) = {
-    val times = Buffer[Int]()
+  def isSpammed(line: (Long)) = {
+    val times = Buffer[Long]()
     for (i <- 1 until this.messageHistory.size) {
       times += this.messageHistory(i)._1 - this.messageHistory(i - 1)._1
     }
@@ -46,6 +40,7 @@ class Query(recipient: String, incoming: Queue[(Int, String)], out: BufferedWrit
   
   
   def warn(spammer: Chatter, out: BufferedWriter) = {
+    this.messageHistory.clear()
     if(this.bot.blackList(spammer) == 1){
       this.sendMessage(out, "Stop the query spam, or else!", spammer.nick)
     } else {
@@ -54,7 +49,8 @@ class Query(recipient: String, incoming: Queue[(Int, String)], out: BufferedWrit
   }
   
   def sleep() = {
-    
+    Thread.sleep(86400000)
+    this.bot.blackList -= chatter
   }
 
 }

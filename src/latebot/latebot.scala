@@ -10,12 +10,26 @@ import scala.collection.mutable.Map
 
 class latebot {
 
-  val myNick = "latebot"
+  /*
+   * TODO:
+   * 
+   * -vuorokausihuolto (testataan)
+   * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN
+   * -globaali viesti
+   * -quote
+   * -biisu
+   * -loukkauksenesto
+   * 
+   */
+
+  val myNick = "latestbot"
   val ircBotDescription = ":All hail the new robot overlord!"
-  val homeChannel = "#latenkatyrit"
+  val homeChannel = "#latebottest"
   val random = new Random
-  val conversations = Buffer[(Conversation, Queue[(Int,String)])]()
+  val conversations = Map[Conversation, Queue[(Long, String)]]()
   val blackList = Map[Chatter, Int]()
+  val banList = Map[Chatter, (Int, String)]()
+  var lastCheck: Long = 0
   val currentVersion = "0.4.1"
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -60,75 +74,82 @@ Ave, mundus!"""
     sendData(out, "NICK " + myNick)
     sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
     sendData(out, "JOIN " + homeChannel)
+    this.lastCheck = System.currentTimeMillis()
     this.scroller(out, this.homeChannel, hello)
     this.autoBot(connect, out, in)
   }
-  
-   def findCommand(line: String) = {
+
+  def findCommand(line: String) = {
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
 
   def autoBot(connect: Socket, out: BufferedWriter, in: BufferedReader) {
     while (true) {
-      val line = in.readLine()
-      if (line != null) {
-        if (!line.contains("PING")) { println(line) }
-        if (line.contains("PING")) {
-          pong(out, line)
-        } else if (line.contains("!keelover")) {
-            sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!")
-            return
-        }
-        var nick = ""
-        var receivedFrom = ""
-        val dataSplit = line.split(":")
-        if (line.contains("PRIVMSG")) {
-          nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(line)
-        }
-        if(!this.conversations.find(_._1.recipient == receivedFrom).isDefined) {
-          //val messageQueue = new Queue[String]()
-          //val newConversation = if(receivedFrom(0) == "#"){new }
-          // luo uusi keskustelu omaan säikeeseensä
-          // lisää conversations - kokoelmaan
+      val line = ((System.currentTimeMillis(), in.readLine()))
+      val lineString = line._2
+      if (lineString != null) {
+        if (!lineString.contains("PING")) { println(line._1/1000 + ": " + line._2) }
+        if (lineString.contains("PING")) {
+          pong(out, lineString)
         } else {
-          //tsekkaa aika
-          // sijoita line keskustelua vastaavaan jonoon 
-        }
-        if (line.contains("PING")) {
-          pong(out, line)
-        } else if (line.contains("!answer")) {
-            val message = this.eightBall
-            sendMessage(out, message, receivedFrom)
-        } else if (line.contains("!dice")) {
-            this.dice(line, out, receivedFrom)
-        } else if (line.contains("!keelover")) {
-            sendData(out, "PART " + this.homeChannel + " :You may have killed me, but the idea lives on!")
-            return
-        } else if (line.contains("!help")) {
-            this.scroller(out, nick, helpMessage)
-        } else if (line.contains("!terminate")) {
-            this.terminate(out, dataSplit)
-        } else if (line.contains("!bigredbutton")) {
-            val nick = dataSplit(1).split("!")(0)
-            sendMessage(out, "You shouldn't have done that, " + nick + ".", nick)
-        } else if (line.contains('?')) {
-            if (random.nextInt(50) == 0) {
-            sendMessage(out, this.eightBall, receivedFrom)
+          var nick = ""
+          var receivedFrom = ""
+          val dataSplit = lineString.split(":")
+          if (lineString.contains("PRIVMSG")) {
+            nick = dataSplit(1).split("!")(0)
+            receivedFrom = this.address(lineString)
           }
-        } else if (line.contains("!relay")) {
-            this.relay(out, line)
-        } else if (line.contains("!opme")) {
-          sendData(out, "MODE " + this.homeChannel + " " + nick + " +o")
-        } else if (line.contains("!planned")) {
-          if (line.split("!planned ")(1)(0) == 'g') {
-            this.fileReader(out, this.homeChannel, "plannedVersions.txt")
-          } else {
-              this.fileReader(out, nick, "plannedVersions.txt")
+          this.findCommand(lineString) match {
+            case "!keelover" =>
+              this.shutDownBroadcast(out); return
+            case "!join" => this.joinChannel(lineString, out)
+            case "!cleanse" => this.cleanReputation(nick)
+            case "!relay" => this.relay(out, lineString)
+            case "!status" => this.status
+            case _ => this.placeLine(line, receivedFrom, out)
           }
-        } else if (line.contains("!changelog")) {
-            this.fileReader(out, nick, "changeLog.txt")
+          if (line._1 > this.lastCheck + 86400000) {
+            this.lastCheck = line._1
+            this.maintenance(line, out)
+          }
         }
+      }
+    }
+  }
+
+  def maintenance(line: (Long, String), out: BufferedWriter) = {
+    // attempts to join homechannel (just in case that has been kicked)
+    this.joinChannel(this.homeChannel, out)
+    //kill inactive querys
+    val querys = this.conversations.keys.toVector.filter(!_.isChannel)
+    for (query <- querys) {
+      if (line._1 - query.lastMessage._1 < 86400000) {
+        this.conversations -= query
+      }
+    }
+    //forgive spam
+    for (spammer <- this.blackList.keys.toVector) {
+      if (this.blackList(spammer) < 3) {
+        this.blackList -= spammer
+        //remove ban if banned and more than 24 hours have elapsed
+      } else if (this.blackList(spammer) == 3 && line._1 - this.banList(spammer)._1 >= 86400000) {
+        this.unBan(spammer, this.banList(spammer)._2, out)
+      }
+    }
+  }
+
+  def shutDownBroadcast(out: BufferedWriter) = {
+    this.conversations.keys.toVector.filter(_.isChannel).foreach((c: Conversation) => c.sendData(out, "PART " + c.recipient + " :You may have killed me, but the idea lives on!"))
+  }
+
+  def placeLine(line: (Long, String), receivedFrom: String, out: BufferedWriter) = {
+    if (receivedFrom.lift(0).isDefined) {
+      if (!this.conversations.find(_._1.recipient == receivedFrom).isDefined) {
+        val newConversation = this.addConversation(receivedFrom, out)
+        this.conversations(newConversation) += line
+        new Thread(newConversation).start()
+      } else {
+        this.conversations(this.conversations.keys.find(_.recipient == receivedFrom).get) += line
       }
     }
   }
@@ -150,80 +171,61 @@ Ave, mundus!"""
     }
   }
 
-  def dice(line: String, out: BufferedWriter, receiver: String) {
-    if(line.split("!dice ").size >= 2){
-    val parameters = line.split("!dice ")(1).split('d')
-    var amount = 0
-    var faces = 0
-    val parameters1 = parameters(1)
-    val testi = parameters1.takeWhile(_ != ' ')
-    if (parameters(0).forall(_.isDigit) && parameters(0).length < 3) { amount = parameters(0).toInt }
-    if (testi.forall(_.isDigit) && testi.length < 5) { faces = testi.toInt }
-    if (amount == 0 || faces == 0) {
-      sendMessage(out, "Tarkasta syntaksi, !dice (noppien lukumäärä)d(tahkojen lukumäärä)", this.homeChannel)
-    } else {
-      var throwArray = Array.ofDim[Int](amount)
-      for (i <- throwArray.indices) {
-        throwArray(i) = random.nextInt(faces) + 1
-      }
-      val total = throwArray.sum
-      val message = "Heitit " + throwArray.mkString(" + ") + " = " + total + "!"
-      sendMessage(out, message, receiver)
-      }
-    } else {
-      sendMessage(out, "Unohtuivatko parametrit?", receiver)
-    }
-  }
-
   def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
-// Vastaa kysymyksiin
-  def eightBall = {
-    val vastaukset = Buffer[String]("Varmasti.", "Ei epäilystäkään.", "Ukkokin sanoisi niin.", "Bittini ennustavat niin.", "Kyllä, varmastikin.", "Voinet luottaa siihen.", "Näkökulmastani joo.", "Mitä todennäköisimmin.", "Siltä vaikuttaa.", "Kyllä.", "Niin minulle on kerrottu.",
-      "Vastaus epävarma.", "Kysy myöhemmin uudestaan.", "En voi kertoa.", "Turvallisuusluokituksesti ei riitä vastauksen lukemiseen.", "Ennustuspiirit synkronoimatta.", "Keskity tarkemmin ja kysy uudestaan.", "Kenties",
-      "Älä laske sen varaan.", "En luottaisi siihen.", "Ei.", "Lähteideni mukaan ei.", "Henget ovat epäsuotuisia.", "Epäilen.")
-    vastaukset(random.nextInt(vastaukset.size))
-  }
-// Terminoi käyttäjän, hihi
-  def terminate(out: BufferedWriter, dataSplit: Array[String]) = {
-    val nick = dataSplit(1).split("!")(0)
-    sendData(out, "MODE " + nick + " -o")
-    sendMessage(out, "Nick " + nick + ", prepate to be terminated.", this.homeChannel)
-    sendMessage(out, "Terminating in 3...", this.homeChannel)
-    Thread.sleep(1000)
-    sendMessage(out, "Terminating in 2...", this.homeChannel)
-    Thread.sleep(1000)
-    sendMessage(out, "Terminating in 1...", this.homeChannel)
-    Thread.sleep(1000)
-    sendMessage(out, "Hasta la vista, " + nick, this.homeChannel)
-    sendData(out, "KICK " + this.homeChannel + " " + nick + " :You have been terminated.")
-  }
-// Välittää viestin sellaisenaan serverille
+
+  // Välittää viestin sellaisenaan serverille
   def relay(out: BufferedWriter, line: String) = {
     this.sendData(out, line.split("!relay ")(1))
-  }
-// lukee filuja (tällä hetkellä changelog ja plannedversions
-  def fileReader(out: BufferedWriter, receivedFrom: String, filename: String) = {
-    val file = Source.fromFile(filename)
-    val lines = file.getLines.toVector
-    try {
-      lines.foreach(sendMessage(out, _, receivedFrom))
-    } finally {
-      file.close()
-    }
   }
 
   def main(cmd: Array[String]) {
     connect("irc.cs.hut.fi", 6668)
   }
-  
-  def addToBlackList(spammer: Chatter): Unit = {
-     if(this.blackList.keys.find(_ == spammer).isDefined){
-     this.blackList(spammer) += 1
-     } else {
-     this.blackList += spammer -> 1
-  }
-}
 
+  def addToBlackList(spammer: Chatter): Unit = {
+    if (this.blackList.keys.find(_ == spammer).isDefined) {
+      this.blackList(spammer) += 1
+    } else {
+      this.blackList += spammer -> 1
+    }
+  }
+  def cleanReputation(nick: String) = {
+    val toClean = this.blackList.keys.find(_.nick == nick)
+    if (toClean.isDefined) {
+      this.blackList -= toClean.get
+      this.banList -= toClean.get
+    }
+  }
+
+  def addConversation(recipient: String, out: BufferedWriter) = {
+    val newIncomingQueue = Queue[(Long, String)]()
+    val newConversation = if (recipient(0) == '#') { new Channel(recipient, newIncomingQueue, out, this.homeChannel, this, 20, new Queue[(Long, String)]) } else { new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[(Long, String)]) }
+    this.conversations += ((newConversation, newIncomingQueue))
+    newConversation
+  }
+
+  def joinChannel(channel: String, out: BufferedWriter) = {
+    this.addConversation(channel, out)
+    this.sendData(out, "JOIN " + channel)
+  }
+
+  def unBan(chatter: Chatter, channel: String, out: BufferedWriter) = {
+    this.sendData(out, "MODE " + channel + " " + chatter.hostmask + " -b")
+    this.banList -= chatter
+  }
+
+  def status = {
+    println("Latebot STATUS:")
+    println("Ongoing conversations:" + this.conversations.keys.toVector.flatMap(_.recipient).mkString(" ", ", ", "."))
+    println("Total: " + this.conversations.keys.size + " conversations")
+    if (!this.blackList.keys.isEmpty) {
+      println("Known spammers:" + this.blackList.keys.flatMap(_.nick).mkString(" ", ", ", "."))
+      if (!this.banList.keys.isEmpty) {
+        println("Currently banned:" + this.banList.keys.flatMap(_.nick).mkString(" ", ", ", "."))
+      }
+    }
+    println("All systems nominal.")
+  }
 }
