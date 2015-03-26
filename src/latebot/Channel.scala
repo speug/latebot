@@ -35,11 +35,11 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
      case 2 => this.kickSpammer(recipient, who, out)
      case _ => this.kickBan(recipient, who, out)
     }
+   who.flushQueue()
    }
   
   def warnSpammer(spammer: Chatter, out: BufferedWriter) = {
     println("Warning " + spammer.nick)
-    spammer.flushQueue
     val message = "Cease the spam, " + spammer.nick + "."
     this.sendMessage(out, message, spammer.nick)
     
@@ -47,15 +47,13 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
   
   def kickSpammer(channel: String, spammer: Chatter, out: BufferedWriter) = {
     println("Kicking " + spammer.nick)
-    spammer.flushQueue
-    this.sendData(out, "KICK " + this.recipient + " " + spammer.hostmask + " :You need to chill, " + spammer.nick + ".")
+    this.sendData(out, "KICK " + channel + " " + "*!*" + spammer.hostmask + " :You need to chill, " + spammer.nick + ".")
   }
   
   def kickBan(channel: String, spammer: Chatter, out: BufferedWriter) = {
     println("Kickbanning " + spammer.nick)
-    spammer.flushQueue
     this.sendData(out, "MODE " + channel + " " + spammer.hostmask + " -o")
-    this.sendData(out, "KICK " + channel + " " + spammer.hostmask + " :The robotic justive is swift, " + spammer.hostmask.takeWhile(_ != '!') + "!")
+    this.sendData(out, "KICK " + channel + " " + "*!*" + spammer.hostmask + " :The robotic justive is swift, " + spammer.hostmask.takeWhile(_ != '!') + "!")
     this.sendData(out, "MODE " + channel + " " + spammer.hostmask + " +b")
   }
   

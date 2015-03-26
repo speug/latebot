@@ -37,7 +37,7 @@ class Chatter(val nick: String, val conversation: Conversation) {
     times.filter(_ <= 3000).size > 5
   }
   
-  def flushQueue = {
+  def flushQueue() = {
     this.messageHistory.clear()
   }
 

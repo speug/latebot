@@ -14,7 +14,8 @@ class latebot {
    * TODO:
    * 
    * -vuorokausihuolto (testataan)
-   * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN
+   * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN (tehty?)
+   * -kunnollinen printti statukseen
    * -globaali viesti
    * -quote
    * -biisu
@@ -43,7 +44,7 @@ Tämänhetkiset ominaisuudet
 !terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
+  val hello = """LATEBOT v0.5(!volatile!) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
  
 Ominaisuudet komennolla !help
  
@@ -206,7 +207,8 @@ Ave, mundus!"""
     newConversation
   }
 
-  def joinChannel(channel: String, out: BufferedWriter) = {
+  def joinChannel(line: String, out: BufferedWriter) = {
+    val channel = line.split("!join ")(1)
     this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
   }
@@ -218,12 +220,12 @@ Ave, mundus!"""
 
   def status = {
     println("Latebot STATUS:")
-    println("Ongoing conversations:" + this.conversations.keys.toVector.flatMap(_.recipient).mkString(" ", ", ", "."))
+    println("Ongoing conversations:" + this.conversations.keys.toVector.flatMap(_.recipient))
     println("Total: " + this.conversations.keys.size + " conversations")
     if (!this.blackList.keys.isEmpty) {
-      println("Known spammers:" + this.blackList.keys.flatMap(_.nick).mkString(" ", ", ", "."))
+      println("Known spammers:" + this.blackList.keys.flatMap(_.nick))
       if (!this.banList.keys.isEmpty) {
-        println("Currently banned:" + this.banList.keys.flatMap(_.nick).mkString(" ", ", ", "."))
+        println("Currently banned:" + this.banList.keys.flatMap(_.nick))
       }
     }
     println("All systems nominal.")
