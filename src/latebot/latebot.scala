@@ -27,7 +27,7 @@ class latebot {
 
   val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
-  val homeChannel = "#latebottest"
+  val homeChannel = "#latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
   val blackList = Map[Chatter, Int]()

@@ -38,14 +38,18 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     
   }
   
+  // tää kaikki on paskaa
   
   def warn(spammer: Chatter, out: BufferedWriter) = {
+    /*
     this.messageHistory.clear()
     if(this.bot.blackList(spammer) == 1){
       this.sendMessage(out, "Stop the query spam, or else!", spammer.nick)
     } else {
       this.sendMessage(out, "Cease this instant, or you will be ignored for the next 24 hours!", spammer.nick)
     }
+    */
+    this.sendMessage(out, "Query spam from " + spammer.nick, "speug")
   }
   
   
