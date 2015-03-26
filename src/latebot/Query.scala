@@ -48,6 +48,8 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     }
   }
   
+  
+  // WHAT WERE YOU THINKING?!?!?!?!?!?!? what does it even doooooooooooooooooo
   def sleep() = {
     Thread.sleep(86400000)
     this.bot.blackList -= chatter

@@ -15,6 +15,7 @@ class latebot {
    * 
    * -vuorokausihuolto (testataan)
    * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN (tehty?)
+   * -leaveChannel
    * -kunnollinen printti statukseen
    * -globaali viesti
    * -quote
@@ -31,6 +32,7 @@ class latebot {
   val blackList = Map[Chatter, Int]()
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
+  var startingTime: Long = 0
   val currentVersion = "0.4.1"
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -76,6 +78,7 @@ Ave, mundus!"""
     sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
     sendData(out, "JOIN " + homeChannel)
     this.lastCheck = System.currentTimeMillis()
+    this.startingTime = this.lastCheck
     this.scroller(out, this.homeChannel, hello)
     this.autoBot(connect, out, in)
   }
@@ -120,18 +123,26 @@ Ave, mundus!"""
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
     // attempts to join homechannel (just in case that has been kicked)
+    println("Joining " + this.homeChannel)
     this.joinChannel(this.homeChannel, out)
     //kill inactive querys
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
+    val removedQuerys = Buffer[Conversation]()
     for (query <- querys) {
       if (line._1 - query.lastMessage._1 < 86400000) {
         this.conversations -= query
+        removedQuerys += query
+      }
+      if(!removedQuerys.isEmpty){
+        println("Removed querys with " + removedQuerys.map(_.recipient).mkString(" ", ", ", "."))
       }
     }
     //forgive spam
+    val forgivenSpammers = Buffer[Chatter]()
     for (spammer <- this.blackList.keys.toVector) {
       if (this.blackList(spammer) < 3) {
         this.blackList -= spammer
+        forgivenSpammers += spammer
         //remove ban if banned and more than 24 hours have elapsed
       } else if (this.blackList(spammer) == 3 && line._1 - this.banList(spammer)._1 >= 86400000) {
         this.unBan(spammer, this.banList(spammer)._2, out)
@@ -192,11 +203,13 @@ Ave, mundus!"""
       this.blackList += spammer -> 1
     }
   }
+  
   def cleanReputation(nick: String) = {
     val toClean = this.blackList.keys.find(_.nick == nick)
     if (toClean.isDefined) {
       this.blackList -= toClean.get
       this.banList -= toClean.get
+      println("Cleaned the reputation of " + nick)
     }
   }
 
@@ -214,18 +227,29 @@ Ave, mundus!"""
   }
 
   def unBan(chatter: Chatter, channel: String, out: BufferedWriter) = {
-    this.sendData(out, "MODE " + channel + " " + chatter.hostmask + " -b")
+    this.sendData(out, "MODE " + channel + " *" + chatter.hostmask + " -b")
     this.banList -= chatter
+    println("Unbanned " + chatter.nick)
+  }
+  
+  def convertTime(time: Long) = {
+    val days = time / 86400000
+    val hours = (time - days) / 3600000
+    val minutes = (time - days - hours) / 60000
+    val seconds = (time - days - hours - minutes) / 1000
+    val millis = (time - days - hours - minutes - seconds)
+    days.toString + " days " + hours.toString() + " hours " + minutes.toString() + " minutes " + seconds.toString + "." + millis + " seconds"
   }
 
   def status = {
     println("Latebot STATUS:")
-    println("Ongoing conversations:" + this.conversations.keys.toVector.flatMap(_.recipient))
+    println("Uptime: " + this.convertTime(System.currentTimeMillis() - this.startingTime) + ".")
+    println("Ongoing conversations:" + this.conversations.keys.map(_.recipient).toVector.mkString(" ",", ","."))
     println("Total: " + this.conversations.keys.size + " conversations")
     if (!this.blackList.keys.isEmpty) {
-      println("Known spammers:" + this.blackList.keys.flatMap(_.nick))
+      println("Known spammers:" + this.blackList.keys.map(_.nick).toVector.mkString(" ",", ","."))
       if (!this.banList.keys.isEmpty) {
-        println("Currently banned:" + this.banList.keys.flatMap(_.nick))
+        println("Currently banned:" + this.banList.keys.map(_.nick).toVector.mkString(" ",", ","."))
       }
     }
     println("All systems nominal.")

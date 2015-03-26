@@ -47,14 +47,14 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
   
   def kickSpammer(channel: String, spammer: Chatter, out: BufferedWriter) = {
     println("Kicking " + spammer.nick)
-    this.sendData(out, "KICK " + channel + " " + "*!*" + spammer.hostmask + " :You need to chill, " + spammer.nick + ".")
+    this.sendData(out, "KICK " + channel + " " + spammer.nick + " :You need to chill, " + spammer.nick + ".")
   }
   
   def kickBan(channel: String, spammer: Chatter, out: BufferedWriter) = {
     println("Kickbanning " + spammer.nick)
     this.sendData(out, "MODE " + channel + " " + spammer.hostmask + " -o")
-    this.sendData(out, "KICK " + channel + " " + "*!*" + spammer.hostmask + " :The robotic justive is swift, " + spammer.hostmask.takeWhile(_ != '!') + "!")
-    this.sendData(out, "MODE " + channel + " " + spammer.hostmask + " +b")
+    this.sendData(out, "KICK " + channel + " " + spammer.nick + " :The robotic justive is swift, " + spammer.nick + "!")
+    this.sendData(out, "MODE " + channel + " *" + spammer.hostmask + " +b")
   }
   
   

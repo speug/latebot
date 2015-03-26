@@ -21,7 +21,7 @@ class Chatter(val nick: String, val conversation: Conversation) {
   }
   
   def hostmask = {
-    this.messageHistory(0)._2.dropWhile(_ == ':').takeWhile(_ != ' ')
+    this.messageHistory(0)._2.dropWhile(_ != '!').takeWhile(_ != ' ')
   }
 
   def isSpam(line: (Long, String)) = {
