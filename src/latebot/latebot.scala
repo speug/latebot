@@ -16,6 +16,7 @@ class latebot {
    * -vuorokausihuolto (testataan)
    * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN (tehty?)
    * -leaveChannel
+   * -tutki mahdollisia useita ulosmenoja
    * -kunnollinen printti statukseen
    * -globaali viesti
    * -quote
@@ -24,7 +25,7 @@ class latebot {
    * 
    */
 
-  val myNick = "latestbot"
+  val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
   val homeChannel = "#latebottest"
   val random = new Random
@@ -33,9 +34,9 @@ class latebot {
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
   var startingTime: Long = 0
-  val currentVersion = "0.4.1"
+  val currentVersion = "0.5.2"
   val helpMessage =
-    """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
+    """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
  
 Tämänhetkiset ominaisuudet
 !answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -44,13 +45,14 @@ Tämänhetkiset ominaisuudet
 !changelog        Tulostaa viimeaikaiset muutokset.
 !bigredbutton     Elä kajoa.
 !terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
+!stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.5(!volatile!) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
+  val hello = """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
  
 Ominaisuudet komennolla !help
  
-Ave, mundus!"""
+Beep boop."""
 
   def connect(address: String, port: Int) = {
     val connect = new Socket(address, port)
@@ -105,7 +107,7 @@ Ave, mundus!"""
           }
           this.findCommand(lineString) match {
             case "!keelover" =>
-              this.shutDownBroadcast(out); return
+              this.shutDownBroadcast(out); this.conversations.keys.foreach(_.kill); return
             case "!join" => this.joinChannel(lineString, out)
             case "!cleanse" => this.cleanReputation(nick)
             case "!relay" => this.relay(out, lineString)
@@ -182,7 +184,7 @@ Ave, mundus!"""
       recipent
     }
   }
-
+  
   def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
@@ -222,8 +224,9 @@ Ave, mundus!"""
 
   def joinChannel(line: String, out: BufferedWriter) = {
     val channel = line.split("!join ")(1)
-    this.addConversation(channel, out)
+    val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
+    new Thread(newConversation).start()
   }
 
   def unBan(chatter: Chatter, channel: String, out: BufferedWriter) = {
@@ -234,10 +237,10 @@ Ave, mundus!"""
   
   def convertTime(time: Long) = {
     val days = time / 86400000
-    val hours = (time - days) / 3600000
-    val minutes = (time - days - hours) / 60000
-    val seconds = (time - days - hours - minutes) / 1000
-    val millis = (time - days - hours - minutes - seconds)
+    val hours = (time - days * 86400000) / 3600000
+    val minutes = (time - days * 86400000 - hours * 3600000) / 60000
+    val seconds = (time - days * 86400000 - hours * 3600000 - minutes * 60000) / 1000
+    val millis = (time - days * 86400000 - hours * 3600000 - minutes * 60000 - seconds * 1000)
     days.toString + " days " + hours.toString() + " hours " + minutes.toString() + " minutes " + seconds.toString + "." + millis + " seconds"
   }
 

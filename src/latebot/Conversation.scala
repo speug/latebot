@@ -10,6 +10,7 @@ import scala.collection.mutable.Queue
 abstract class Conversation(val recipient: String, val incoming: Queue[(Long,String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot, val historySize: Int, val messageHistory: Queue[(Long, String)]) extends Runnable {
 
   private val random = new Random
+  private var stop = false
 
   val helpMessage =
     """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
@@ -29,7 +30,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   }
 
   def run(): Unit = {
-    while (true) {
+    while (!this.stop) {
       if (!this.incoming.isEmpty) {
         val line = this.incoming.dequeue()
         val lineString = line._2
@@ -56,6 +57,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
           case "!opme" => this.opme(out, nick)
           case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
           case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
+          case "!stats" => this.stats(out)
           case _ =>
         }
       }
@@ -150,25 +152,31 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   }
 
   def plannedFeatures(out: BufferedWriter, line: String, receivedFrom: String, nick: String) = {
-    if (line.split("!planned ")(1)(0) == 'g') {
-      this.fileReader(out, this.homeChannel, "plannedVersions.txt")
+    if (line.split("!planned ").lift(1).isDefined && line.split("!planned ")(1)(0) == 'g') {
+      this.fileReader(out, if(this.isChannel){this.recipient} else {this.homeChannel}, "plannedVersions.txt")
     } else {
       this.fileReader(out, nick, "plannedVersions.txt")
     }
   }
 
-  def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = synchronized {
+  def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
+    var lines = Vector[String]()
+    this.synchronized {
     val file = Source.fromFile(filename)
-    val lines = file.getLines.toVector
-    try {
-      lines.foreach(sendMessage(out, _, receivedFrom))
-    } finally {
-      file.close()
+    lines = file.getLines.toVector
+    file.close()
     }
+      lines.foreach(sendMessage(out, _, receivedFrom))
   }
   
-  def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = synchronized {
-  //asd
+  def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
+  var lines = Vector[String]()
+    this.synchronized {
+    val file = Source.fromFile(filename)
+    lines = file.getLines.toVector
+    file.close()
+    }
+    this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
   }
   
   def isChannel = {
@@ -185,7 +193,23 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   def lastMessage = {
     this.messageHistory(this.messageHistory.size - 1)
   }
-
+  
+  def stats(out: BufferedWriter) = {
+    this.sendMessage(out, "LATEBOT STATUS", this.recipient)
+    this.sendMessage(out, "Current uptime:" + this.bot.convertTime(System.currentTimeMillis () - this.bot.startingTime), this.recipient)
+    this.sendMessage(out, "Time since last scheduled maintenance:" + this.bot.convertTime(System.currentTimeMillis () - this.bot.lastCheck), this.recipient)
+    this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ",", ","."), this.recipient)
+    this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
+    if (!this.bot.blackList.keys.isEmpty) {
+      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ",", ","."), this.recipient)
+    }
+    this.sendMessage(out, "All systems nominal", this.recipient)
+  }
+  
+  def kill = {
+    println("Killing thread at: " + this.recipient)
+    this.stop = true
+  }
   
   def takeLine(line: (Long, String), nick: String): Unit
   

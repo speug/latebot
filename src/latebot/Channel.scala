@@ -39,22 +39,31 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
    }
   
   def warnSpammer(spammer: Chatter, out: BufferedWriter) = {
+    /*
     println("Warning " + spammer.nick)
     val message = "Cease the spam, " + spammer.nick + "."
     this.sendMessage(out, message, spammer.nick)
-    
+    */
+    this.sendMessage(out, "Warning " + spammer.nick, "speug")
   }
   
   def kickSpammer(channel: String, spammer: Chatter, out: BufferedWriter) = {
+    /*
     println("Kicking " + spammer.nick)
     this.sendData(out, "KICK " + channel + " " + spammer.nick + " :You need to chill, " + spammer.nick + ".")
+    *
+    */
+    this.sendMessage(out, "But I want to kick " + spammer.nick, "speug")
   }
   
   def kickBan(channel: String, spammer: Chatter, out: BufferedWriter) = {
+    /*
     println("Kickbanning " + spammer.nick)
-    this.sendData(out, "MODE " + channel + " " + spammer.hostmask + " -o")
-    this.sendData(out, "KICK " + channel + " " + spammer.nick + " :The robotic justive is swift, " + spammer.nick + "!")
-    this.sendData(out, "MODE " + channel + " *" + spammer.hostmask + " +b")
+    this.sendData(out, "MODE " + channel + " " + " -o" + spammer.hostmask)
+    this.sendData(out, "KICK " + channel + " " + spammer.nick + " :The robotic justice is swift, " + spammer.nick + ".")
+    this.sendData(out, "MODE " + channel + " +b" + " *" + spammer.hostmask)
+    */
+    this.sendMessage(out, "Banning " + spammer.nick, "speug")
   }
   
   
