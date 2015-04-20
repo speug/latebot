@@ -27,14 +27,14 @@ class latebot {
 
   val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
-  val homeChannel = "#latenkatyrit"
+  val homeChannel = "#latebottest"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
   val blackList = Map[Chatter, Int]()
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
   var startingTime: Long = 0
-  val currentVersion = "0.5.2"
+  val currentVersion = "0.5.3"
   val helpMessage =
     """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
  
@@ -49,9 +49,6 @@ Tämänhetkiset ominaisuudet
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
   val hello = """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
- 
-Ominaisuudet komennolla !help
- 
 Beep boop."""
 
   def connect(address: String, port: Int) = {
@@ -108,10 +105,11 @@ Beep boop."""
           this.findCommand(lineString) match {
             case "!keelover" =>
               this.shutDownBroadcast(out); this.conversations.keys.foreach(_.kill); return
-            case "!join" => this.joinChannel(lineString, out)
+            case "!join" => this.joinChannel(lineString, out, "line")
             case "!cleanse" => this.cleanReputation(nick)
             case "!relay" => this.relay(out, lineString)
             case "!status" => this.status
+            case "!maintenance" => this.maintenanceTest(line, out)
             case _ => this.placeLine(line, receivedFrom, out)
           }
           if (line._1 > this.lastCheck + 86400000) {
@@ -122,11 +120,15 @@ Beep boop."""
       }
     }
   }
+  
+  def maintenanceTest(line: (Long,String), out: BufferedWriter) = {
+    this.maintenance(line, out)
+  }
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
     // attempts to join homechannel (just in case that has been kicked)
     println("Joining " + this.homeChannel)
-    this.joinChannel(this.homeChannel, out)
+    this.joinChannel(this.homeChannel, out, "channel")
     //kill inactive querys
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
     val removedQuerys = Buffer[Conversation]()
@@ -134,6 +136,7 @@ Beep boop."""
       if (line._1 - query.lastMessage._1 < 86400000) {
         this.conversations -= query
         removedQuerys += query
+        query.kill
       }
       if(!removedQuerys.isEmpty){
         println("Removed querys with " + removedQuerys.map(_.recipient).mkString(" ", ", ", "."))
@@ -222,8 +225,8 @@ Beep boop."""
     newConversation
   }
 
-  def joinChannel(line: String, out: BufferedWriter) = {
-    val channel = line.split("!join ")(1)
+  def joinChannel(line: String, out: BufferedWriter, input: String) = {
+    val channel = if(input == "line"){line.split("!join ")(1) } else { line }
     val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
     new Thread(newConversation).start()

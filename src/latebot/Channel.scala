@@ -44,7 +44,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     val message = "Cease the spam, " + spammer.nick + "."
     this.sendMessage(out, message, spammer.nick)
     */
-    this.sendMessage(out, "Warning " + spammer.nick, "speug")
+    this.sendMessage(out, "Warning " + spammer.nick + " at " + this.recipient, "speug")
   }
   
   def kickSpammer(channel: String, spammer: Chatter, out: BufferedWriter) = {
@@ -53,7 +53,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     this.sendData(out, "KICK " + channel + " " + spammer.nick + " :You need to chill, " + spammer.nick + ".")
     *
     */
-    this.sendMessage(out, "But I want to kick " + spammer.nick, "speug")
+    this.sendMessage(out, "But I want to kick " + spammer.nick + " at " + this.recipient, "speug")
   }
   
   def kickBan(channel: String, spammer: Chatter, out: BufferedWriter) = {
@@ -63,7 +63,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     this.sendData(out, "KICK " + channel + " " + spammer.nick + " :The robotic justice is swift, " + spammer.nick + ".")
     this.sendData(out, "MODE " + channel + " +b" + " *" + spammer.hostmask)
     */
-    this.sendMessage(out, "Banning " + spammer.nick, "speug")
+    this.sendMessage(out, "Banning " + spammer.nick + " at " + this.recipient, "speug")
   }
   
   

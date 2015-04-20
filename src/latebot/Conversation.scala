@@ -13,7 +13,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   private var stop = false
 
   val helpMessage =
-    """LATEBOT v0.4(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
+    """LATEBOT v0.5(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
 
 			Tämänhetkiset ominaisuudet
 			!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -92,18 +92,16 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   def dice(line: String, out: BufferedWriter, receiver: String) {
     if (line.split("!dice ").size >= 2) {
       val parameters = line.split("!dice ")(1).split('d')
-      var amount = 0
-      var faces = 0
-      val parameters1 = parameters(1)
-      val testi = parameters1.takeWhile(_ != ' ')
-      if (parameters(0).forall(_.isDigit) && parameters(0).length < 3) { amount = parameters(0).toInt }
-      if (testi.forall(_.isDigit) && testi.length < 5) { faces = testi.toInt }
-      if (amount == 0 || faces == 0) {
+      var amount = parameters.lift(0).getOrElse("0").trim()
+      var faces = parameters.lift(1).getOrElse("0").trim()
+      if (amount.forall(_.isDigit) && amount.length < 3 && !amount.isEmpty()) { amount = amount} else {amount = "0"}
+      if (faces.forall(_.isDigit) && faces.length < 5 && !faces.isEmpty()) { faces = faces } else {faces = "0"}
+      if (amount == "0" || faces == "0") {
         sendMessage(out, "Tarkasta syntaksi, !dice (noppien lukumäärä)d(tahkojen lukumäärä)", this.homeChannel)
       } else {
-        var throwArray = Array.ofDim[Int](amount)
+        var throwArray = Array.ofDim[Int](amount.toInt)
         for (i <- throwArray.indices) {
-          throwArray(i) = random.nextInt(faces) + 1
+          throwArray(i) = random.nextInt(faces.toInt) + 1
         }
         val total = throwArray.sum
         val message = "Heitit " + throwArray.mkString(" + ") + " = " + total + "!"

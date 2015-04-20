@@ -25,7 +25,11 @@ class Chatter(val nick: String, val conversation: Conversation) {
   }
 
   def isSpam(line: (Long, String)) = {
-  (this.isTooFrequent(line._1) || (this.messageHistory.filter((historyLine: (Long, String)) => historyLine._2 == line._2 && !historyLine._2.split(":").contains('!')).size >= 5))
+    if(this.conversation.isChannel){
+    (this.isTooFrequent(line._1) || (this.messageHistory.filter((historyLine: (Long, String)) => historyLine._2 == line._2 && !historyLine._2.split(":").contains('!')).size >= 5))
+    } else {
+      false
+    }
   }
 
   def isTooFrequent(line: (Long)) = {
