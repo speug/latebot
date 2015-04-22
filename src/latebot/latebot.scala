@@ -22,12 +22,12 @@ class latebot {
    * -quote
    * -biisu
    * -loukkauksenesto
-   * 
+   * -reaktio speugin poistumiseen
    */
 
   val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
-  val homeChannel = "#latebottest"
+  val homeChannel = "#latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
   val blackList = Map[Chatter, Int]()
@@ -101,6 +101,10 @@ Beep boop."""
           if (lineString.contains("PRIVMSG")) {
             nick = dataSplit(1).split("!")(0)
             receivedFrom = this.address(lineString)
+          }
+          if(lineString.contains("+o") && lineString.contains(this.myNick)){
+            val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
+            if(Random.nextInt(3) == 1) {this.sendMessage(out, messages(Random.nextInt(messages.size)), receivedFrom)}
           }
           this.findCommand(lineString) match {
             case "!keelover" =>
