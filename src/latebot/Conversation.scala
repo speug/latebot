@@ -194,8 +194,8 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   
   def stats(out: BufferedWriter) = {
     this.sendMessage(out, "LATEBOT STATUS", this.recipient)
-    this.sendMessage(out, "Current uptime:" + this.bot.convertTime(System.currentTimeMillis () - this.bot.startingTime), this.recipient)
-    this.sendMessage(out, "Time since last scheduled maintenance:" + this.bot.convertTime(System.currentTimeMillis () - this.bot.lastCheck), this.recipient)
+    this.sendMessage(out, "Current uptime: " + this.bot.convertTime(System.currentTimeMillis () - this.bot.startingTime), this.recipient)
+    this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis () - this.bot.lastCheck), this.recipient)
     this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ",", ","."), this.recipient)
     this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
     if (!this.bot.blackList.keys.isEmpty) {

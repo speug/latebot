@@ -27,13 +27,14 @@ class latebot {
 
   val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
-  val homeChannel = "#latenkatyrit"
+  var homeChannel = "#latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
   val blackList = Map[Chatter, Int]()
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
   var startingTime: Long = 0
+  private var printMessagesToConsole = true
   val currentVersion = "0.5.3"
   val helpMessage =
     """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
@@ -73,6 +74,9 @@ Beep boop."""
   }
 
   def settingUp(connect: Socket, out: BufferedWriter, in: BufferedReader): Unit = {
+    println("Starting latebot...")
+    this.homeChannel = Option[String](readLine("Desired homechannel: ")).getOrElse(this.homeChannel)
+    println("Homechannel set to " + this.homeChannel)
     sendData(out, "NICK " + myNick)
     sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
     sendData(out, "JOIN " + homeChannel)
@@ -91,7 +95,7 @@ Beep boop."""
       val line = ((System.currentTimeMillis(), in.readLine()))
       val lineString = line._2
       if (lineString != null) {
-        if (!lineString.contains("PING")) { println(line._1/1000 + ": " + line._2) }
+        if (!lineString.contains("PING") && this.printMessagesToConsole) { println(line._1/1000 + ": " + line._2) }
         if (lineString.contains("PING")) {
           pong(out, lineString)
         } else {
@@ -114,6 +118,7 @@ Beep boop."""
             case "!relay" => this.relay(out, lineString)
             case "!status" => this.status
             case "!maintenance" => this.maintenanceTest(line, out)
+            case "!printlines" => this.messagePrintToggle
             case _ => this.placeLine(line, receivedFrom, out)
           }
           if (line._1 > this.lastCheck + 86400000) {
@@ -131,6 +136,7 @@ Beep boop."""
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
     // attempts to join homechannel (just in case that has been kicked)
+    println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
     println("Joining " + this.homeChannel)
     this.joinChannel(this.homeChannel, out, "channel")
     //kill inactive querys
@@ -263,5 +269,15 @@ Beep boop."""
       }
     }
     println("All systems nominal.")
+  }
+  
+  def messagePrintToggle = {
+    if(this.printMessagesToConsole){
+      println("No longer printing messages to console.")
+      this.printMessagesToConsole = false
+    } else {
+      println("Messages will now be printed to console.")
+      this.printMessagesToConsole = true
+    }
   }
 }
