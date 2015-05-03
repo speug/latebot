@@ -49,7 +49,7 @@ Tämänhetkiset ominaisuudet
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
+  val hello = """LATEBOT v0.5(!volatile! / ;_; n-neutered) -Brutish edition-
 Beep boop."""
 
   def connect(address: String, port: Int) = {
@@ -119,6 +119,7 @@ Beep boop."""
             case "!status" => this.status
             case "!maintenance" => this.maintenanceTest(line, out)
             case "!printlines" => this.messagePrintToggle
+            case "!birthday" => this.birthday(out, in, lineString)
             case _ => this.placeLine(line, receivedFrom, out)
           }
           if (line._1 > this.lastCheck + 86400000) {
@@ -138,7 +139,7 @@ Beep boop."""
     // attempts to join homechannel (just in case that has been kicked)
     println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
     println("Joining " + this.homeChannel)
-    this.joinChannel(this.homeChannel, out, "channel")
+    this.sendData(out, "JOIN " + this.homeChannel)
     //kill inactive querys
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
     val removedQuerys = Buffer[Conversation]()
@@ -278,6 +279,21 @@ Beep boop."""
     } else {
       println("Messages will now be printed to console.")
       this.printMessagesToConsole = true
+    }
+  }
+  
+    def birthday(out: BufferedWriter, in:BufferedReader, lineString:String) = {
+    val birthdayBoy = lineString.split("!birthday ")(1)
+    val line = in.readLine()
+    if(line.contains(birthdayBoy)){
+      this.sendData(out, "WHOIS " + birthdayBoy)
+      val credintials = in.readLine().split("latebot ")(1)
+      println("Received credintials: " + credintials)
+      this.sendMessage(out, "Happy Birthday to you", this.homeChannel)
+      this.sendMessage(out, "Happy Birthday to YOU", this.homeChannel)
+      this.sendMessage(out, "Happy Birthday to [" + credintials + "]", this.homeChannel)
+      this.sendMessage(out, "Happy Birthday to youuuuuuu", this.homeChannel)
+      this.sendMessage(out, "uuUUUUUUUUUUUUUUUUUUUUUUuuuuuuuuuuuuuuuuuuuuUUUUUUUUUU.", this.homeChannel)
     }
   }
 }

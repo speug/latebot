@@ -166,6 +166,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
     }
       lines.foreach(sendMessage(out, _, receivedFrom))
   }
+ 
   
   def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
   var lines = Vector[String]()
