@@ -29,7 +29,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
 
-  def run(): Unit = {
+  def run(): Unit = synchronized {
     while (!this.stop) {
       if (!this.incoming.isEmpty) {
         val line = this.incoming.dequeue()
@@ -60,6 +60,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
           case "!stats" => this.stats(out)
           case _ =>
         }
+        this.wait()
       }
     }
   }

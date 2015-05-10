@@ -49,7 +49,7 @@ Tämänhetkiset ominaisuudet
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.5(!volatile! / ;_; n-neutered) -Brutish edition-
+  val hello = """LATEBOT v0.5(>100% CPU edition / ;_; n-neutered) -Lean mean irkking machine-
 Beep boop."""
 
   def connect(address: String, port: Int) = {
@@ -95,7 +95,7 @@ Beep boop."""
       val line = ((System.currentTimeMillis(), in.readLine()))
       val lineString = line._2
       if (lineString != null) {
-        if (!lineString.contains("PING") && this.printMessagesToConsole) { println(line._1/1000 + ": " + line._2) }
+        if (!lineString.contains("PING") && this.printMessagesToConsole) { println(line._1 / 1000 + ": " + line._2) }
         if (lineString.contains("PING")) {
           pong(out, lineString)
         } else {
@@ -106,9 +106,9 @@ Beep boop."""
             nick = dataSplit(1).split("!")(0)
             receivedFrom = this.address(lineString)
           }
-          if(lineString.contains("+o") && lineString.contains(this.myNick)){
+          if (lineString.contains("+o") && lineString.contains(this.myNick)) {
             val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
-            if(Random.nextInt(3) == 1) {this.sendMessage(out, messages(Random.nextInt(messages.size)), receivedFrom)}
+            if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
           }
           this.findCommand(lineString) match {
             case "!keelover" =>
@@ -120,24 +120,27 @@ Beep boop."""
             case "!maintenance" => this.maintenanceTest(line, out)
             case "!printlines" => this.messagePrintToggle
             case "!birthday" => this.birthday(out, in, lineString)
+            case "!part" => this.part(out, lineString, receivedFrom)
             case _ => this.placeLine(line, receivedFrom, out)
           }
           if (line._1 > this.lastCheck + 86400000) {
-            this.lastCheck = line._1
             this.maintenance(line, out)
           }
         }
+      } else {
+        Thread.sleep(1000)
       }
     }
   }
-  
-  def maintenanceTest(line: (Long,String), out: BufferedWriter) = {
+
+  def maintenanceTest(line: (Long, String), out: BufferedWriter) = {
     this.maintenance(line, out)
   }
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
     // attempts to join homechannel (just in case that has been kicked)
     println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
+    this.lastCheck = line._1
     println("Joining " + this.homeChannel)
     this.sendData(out, "JOIN " + this.homeChannel)
     //kill inactive querys
@@ -149,7 +152,7 @@ Beep boop."""
         removedQuerys += query
         query.kill
       }
-      if(!removedQuerys.isEmpty){
+      if (!removedQuerys.isEmpty) {
         println("Removed querys with " + removedQuerys.map(_.recipient).mkString(" ", ", ", "."))
       }
     }
@@ -177,7 +180,9 @@ Beep boop."""
         this.conversations(newConversation) += line
         new Thread(newConversation).start()
       } else {
-        this.conversations(this.conversations.keys.find(_.recipient == receivedFrom).get) += line
+        val targetConversation = this.conversations.keys.find(_.recipient == receivedFrom).get
+        this.conversations(targetConversation) += line
+        targetConversation.notify()
       }
     }
   }
@@ -198,7 +203,7 @@ Beep boop."""
       recipent
     }
   }
-  
+
   def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
@@ -219,7 +224,7 @@ Beep boop."""
       this.blackList += spammer -> 1
     }
   }
-  
+
   def cleanReputation(nick: String) = {
     val toClean = this.blackList.keys.find(_.nick == nick)
     if (toClean.isDefined) {
@@ -237,7 +242,7 @@ Beep boop."""
   }
 
   def joinChannel(line: String, out: BufferedWriter, input: String) = {
-    val channel = if(input == "line"){line.split("!join ")(1) } else { line }
+    val channel = if (input == "line") { line.split("!join ")(1) } else { line }
     val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
     new Thread(newConversation).start()
@@ -248,7 +253,7 @@ Beep boop."""
     this.banList -= chatter
     println("Unbanned " + chatter.nick)
   }
-  
+
   def convertTime(time: Long) = {
     val days = time / 86400000
     val hours = (time - days * 86400000) / 3600000
@@ -261,19 +266,19 @@ Beep boop."""
   def status = {
     println("Latebot STATUS:")
     println("Uptime: " + this.convertTime(System.currentTimeMillis() - this.startingTime) + ".")
-    println("Ongoing conversations:" + this.conversations.keys.map(_.recipient).toVector.mkString(" ",", ","."))
+    println("Ongoing conversations:" + this.conversations.keys.map(_.recipient).toVector.mkString(" ", ", ", "."))
     println("Total: " + this.conversations.keys.size + " conversations")
     if (!this.blackList.keys.isEmpty) {
-      println("Known spammers:" + this.blackList.keys.map(_.nick).toVector.mkString(" ",", ","."))
+      println("Known spammers:" + this.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."))
       if (!this.banList.keys.isEmpty) {
-        println("Currently banned:" + this.banList.keys.map(_.nick).toVector.mkString(" ",", ","."))
+        println("Currently banned:" + this.banList.keys.map(_.nick).toVector.mkString(" ", ", ", "."))
       }
     }
     println("All systems nominal.")
   }
-  
+
   def messagePrintToggle = {
-    if(this.printMessagesToConsole){
+    if (this.printMessagesToConsole) {
       println("No longer printing messages to console.")
       this.printMessagesToConsole = false
     } else {
@@ -281,11 +286,11 @@ Beep boop."""
       this.printMessagesToConsole = true
     }
   }
-  
-    def birthday(out: BufferedWriter, in:BufferedReader, lineString:String) = {
+
+  def birthday(out: BufferedWriter, in: BufferedReader, lineString: String) = {
     val birthdayBoy = lineString.split("!birthday ")(1)
     val line = in.readLine()
-    if(line.contains(birthdayBoy)){
+    if (line.contains(birthdayBoy)) {
       this.sendData(out, "WHOIS " + birthdayBoy)
       val credintials = in.readLine().split("latebot ")(1)
       println("Received credintials: " + credintials)
@@ -294,6 +299,20 @@ Beep boop."""
       this.sendMessage(out, "Happy Birthday to [" + credintials + "]", this.homeChannel)
       this.sendMessage(out, "Happy Birthday to youuuuuuu", this.homeChannel)
       this.sendMessage(out, "uuUUUUUUUUUUUUUUUUUUUUUUuuuuuuuuuuuuuuuuuuuuUUUUUUUUUU.", this.homeChannel)
+    }
+  }
+
+  def part(out: BufferedWriter, lineString: String, nick: String) = {
+    val params = lineString.split("!part ").lift(1)
+    val channel = params.getOrElse("empty").takeWhile(_ != ' ')
+    var partMessage = params.getOrElse("empty").dropWhile(_ != ' ')
+    if (partMessage.isEmpty) {
+      partMessage = "You live another day, meatbags!"
+    }
+    if (this.conversations.keys.find(_.recipient == channel).isEmpty) {
+      this.sendMessage(out, "No such channel.", nick)
+    } else {
+      this.sendData(out, "PART " + channel + " :" + partMessage)
     }
   }
 }
