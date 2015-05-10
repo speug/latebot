@@ -29,7 +29,8 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
 
-  def run(): Unit = synchronized {
+  def run(): Unit = {
+    this.synchronized {
     while (!this.stop) {
       if (!this.incoming.isEmpty) {
         val line = this.incoming.dequeue()
@@ -63,6 +64,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
         this.wait()
       }
     }
+  }
   }
 
   def sendData(out: BufferedWriter, ircDataOutput: String) = {

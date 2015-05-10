@@ -172,6 +172,7 @@ Beep boop."""
   def shutDownBroadcast(out: BufferedWriter) = {
     this.conversations.keys.toVector.filter(_.isChannel).foreach((c: Conversation) => c.sendData(out, "PART " + c.recipient + " :You may have killed me, but the idea lives on!"))
   }
+  
 
   def placeLine(line: (Long, String), receivedFrom: String, out: BufferedWriter) = {
     if (receivedFrom.lift(0).isDefined) {
@@ -182,7 +183,9 @@ Beep boop."""
       } else {
         val targetConversation = this.conversations.keys.find(_.recipient == receivedFrom).get
         this.conversations(targetConversation) += line
+        targetConversation.synchronized {
         targetConversation.notify()
+        }
       }
     }
   }
