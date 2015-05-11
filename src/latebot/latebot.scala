@@ -8,23 +8,24 @@ import scala.io._
 import scala.collection.mutable.Queue
 import scala.collection.mutable.Map
 
+/**The object represents the framework and main thread of latebot, the bot itself.
+ * It deals with the connection between the bot and the server, controls all of the individual
+ * conversations and writes to files.
+ */
+
 class latebot {
 
   /*
    * TODO:
    * 
-   * -vuorokausihuolto (testataan)
-   * -LÄHETYT VIESTIT LISÄTÄÄN HISTORIOIHIN (tehty?)
-   * -leaveChannel
-   * -tutki mahdollisia useita ulosmenoja
-   * -kunnollinen printti statukseen
    * -globaali viesti
    * -quote
    * -biisu
    * -loukkauksenesto
    * -reaktio speugin poistumiseen
    */
-
+  
+// Construction parameters
   val myNick = "latebotten"
   val ircBotDescription = ":All hail the new robot overlord!"
   var homeChannel = "#latenkatyrit"
@@ -51,6 +52,16 @@ Tämänhetkiset ominaisuudet
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
   val hello = """LATEBOT v0.5(>100% CPU edition / ;_; n-neutered) -Lean mean irkking machine-
 Beep boop."""
+  
+  /**
+   * Connects the bot to the server. Returns nothing, but passes both the
+   * BufferedReader and the BufferedWriter onwards.
+   * 
+   * @param address url or ip of the target server
+   * @tparam address String
+   * @param port the port number
+   * @tparam port Int
+   */
 
   def connect(address: String, port: Int) = {
     val connect = new Socket(address, port)
@@ -59,6 +70,20 @@ Beep boop."""
     settingUp(connect, out, in)
   }
 
+  
+  /**
+   * Sends raw data to the server. Used for special communication with the server
+   * than simple messages. Returns nothing.
+   * 
+   * For example, sendData(out, "PART #latenkatyrit :So long!") sends a part message
+   * for channel #latenkatyrit with the message "So long!".
+   *
+   * 
+   * @param out the output writer
+   * @tparam out BufferedWriter
+   * @param ircDataOutput the text to be sent to the server
+   * @tparam ircDataOutput String
+   */
   def sendData(out: BufferedWriter, ircDataOutput: String) = {
     out.write(ircDataOutput)
     if (!ircDataOutput.contains("pong")) {
@@ -68,10 +93,33 @@ Beep boop."""
     out.flush()
   }
 
+  /**
+   * Sends a PRIVMSG to the desired recipient. A streamlined version of latebot.sendData.
+   * Returns nothing.
+   * 
+   * @param out the output writer
+   * @tparam out BufferedWriter
+   * @param message the message to be sent
+   * @tparam message String
+   * @param receiver the desired recipient
+   * @tparam String
+   */
   def sendMessage(out: BufferedWriter, message: String, receiver: String) = {
     val toBeSent = "PRIVMSG " + receiver + " :" + message
     sendData(out, toBeSent)
   }
+  
+  /**
+   * Connects the bot to the server, then calls the main loop of the bot.
+   * Returns nothing.
+   * 
+   * @param connect the socket through which communication between the server is handled
+   * @tparam connect Socket
+   * @param out the output writer to the server
+   * @tparam out BufferedWriter
+   * @param in the input reader from the server
+   * @tparam in BufferedReader
+   */
 
   def settingUp(connect: Socket, out: BufferedWriter, in: BufferedReader): Unit = {
     println("Starting latebot...")
@@ -86,19 +134,58 @@ Beep boop."""
     this.autoBot(connect, out, in)
   }
 
+  /**
+   * Returns the command word in a given string.
+   * 
+   * @param line a string possibly containing a keyword, marked with a '!'
+   * @tparam line String
+   * 
+   * @returns a command word, if such exists; otherwise an empty string.
+   */
   def findCommand(line: String) = {
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
+  
+  /**
+   * The main loop. Handles the connection between the bot and the server and controls the threads.
+   * Also handles the daily maintenance. Returns nothing.
+   * 
+   * Command word explanations:
+   * !keelover		shuts down the program, kills all threads
+   * !join				calls latebot.join
+   * !cleanse 		calls latebot.cleanReputation
+   * !relay				calls latebot.relay
+   * !status			calls latebot.status
+   * !maintenance	calls latebot.maintenanceTest
+   * !printlines	calls latebot.messagePrintToggle
+   * !birthday		calls latebot.birthday
+   * !part				calls latebot.part
+   * _						calls latebot.placeline
+   * 
+   * For more detailed explanations, see individual methods.
+   * 
+   * @param connect the socket through which communication between the server is handled
+   * @tparam connect Socket
+   * @param out the output writer to the server
+   * @tparam out BufferedWriter
+   * @param in the input reader from the server
+   * @tparam in BufferedReader
+   */
 
   def autoBot(connect: Socket, out: BufferedWriter, in: BufferedReader) {
     while (true) {
+      // the line is saved with it's time as a tuple
         val line = ((System.currentTimeMillis(), in.readLine()))
+        // the string part is placed in a variable
         val lineString = line._2
         if (lineString != null) {
+          // print the incoming lines to console only if they are not pings and the printMessagesToConsole flag is set to true
           if (!lineString.contains("PING") && this.printMessagesToConsole) { println(line._1 / 1000 + ": " + line._2) }
+          // if bot is pinged by server, it must pong
           if (lineString.contains("PING")) {
             pong(out, lineString)
           } else {
+            // find out the nick that sent the message and from where it was received
             var nick = ""
             var receivedFrom = ""
             val dataSplit = lineString.split(":")
@@ -106,23 +193,26 @@ Beep boop."""
               nick = dataSplit(1).split("!")(0)
               receivedFrom = this.address(lineString)
             }
+            // party about receiving operator status (@)
             if (lineString.contains("+o") && lineString.contains(this.myNick)) {
               val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
               if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
             }
+            // react to command words or transfer line to a conversation
             this.findCommand(lineString) match {
-              case "!keelover" =>
+              case "!keelover"    =>
                 this.shutDownBroadcast(out); this.conversations.keys.foreach(_.kill); return
-              case "!join" => this.joinChannel(lineString, out, "line")
-              case "!cleanse" => this.cleanReputation(nick)
-              case "!relay" => this.relay(out, lineString)
-              case "!status" => this.status
+              case "!join"        => this.joinChannel(lineString, out, "line")
+              case "!cleanse"     => this.cleanReputation(nick)
+              case "!relay"       => this.relay(out, lineString)
+              case "!status"      => this.status
               case "!maintenance" => this.maintenanceTest(line, out)
-              case "!printlines" => this.messagePrintToggle
-              case "!birthday" => this.birthday(out, in, lineString)
-              case "!part" => this.part(out, lineString, receivedFrom)
-              case _ => this.placeLine(line, receivedFrom, out)
+              case "!printlines"  => this.messagePrintToggle
+              case "!birthday"    => this.birthday(out, in, lineString)
+              case "!part"        => this.part(out, lineString, receivedFrom)
+              case _              => this.placeLine(line, receivedFrom, out)
             }
+            // perform maintenance if more than 24h since last maintenance
             if (line._1 > this.lastCheck + 86400000) {
               this.maintenance(line, out)
             }
