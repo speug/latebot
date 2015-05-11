@@ -61,7 +61,9 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
           case "!stats" => this.stats(out)
           case _ =>
         }
+        println(this.recipient + " going into wait mode.")
         this.wait()
+        println(this.recipient + " has been notified.")
       }
     }
   }
@@ -173,7 +175,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   
   def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
   var lines = Vector[String]()
-    this.synchronized {
+    this.bot.synchronized {
     val file = Source.fromFile(filename)
     lines = file.getLines.toVector
     file.close()
@@ -213,6 +215,52 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
     this.stop = true
   }
   
+  
+  def quote(out: BufferedWriter, lineString: String) = this.bot.synchronized {
+    val params = lineString.split("!quote ").lift(1).getOrElse("empty")
+    if(params == "empty"){
+      this.randomReader(out, this.address(lineString), "quotes.txt")
+    } else {
+      this.addQuote(out, lineString, this.address(lineString), params)
+    }
+  }
+ 
+    
+  def addQuote(out: BufferedWriter, lineString: String, receivedFrom: String, params: String) = this.bot.synchronized {
+    params(0) match {
+      case '"' => this.textQuote(out, lineString, receivedFrom, params)
+      case 'N' => this.historyQuote(out, receivedFrom, params)
+      case _ => this.sendMessage(out, "Syntax error: start the quote with either \" or N.", receivedFrom)
+    }
+  }
+  
+  def textQuote(out: BufferedWriter, lineString: String, receivedFrom: String, params: String) = this.bot.synchronized {
+    val quote = lineString.split("!quote ")(1).dropWhile(_ != '\"').takeWhile(_ != '\"')
+    val authorBlock = lineString.split("!quote ")(1).dropWhile(_ != '\"').dropWhile(_ != '\"')
+    if(!authorBlock.lift(0).isDefined || !authorBlock.lift(1).isDefined || (authorBlock(0) != '-' && authorBlock(1) != '-')){
+      this.sendMessage(out, "Syntax error: the quote must be entered as \"<quote>\" -<author>.", receivedFrom)
+    } else if(!this.bot.conversations.keys.find(_.recipient == receivedFrom).isDefined) {
+      val newQuery = this.bot.addConversation(receivedFrom, out)
+      new Thread(newQuery).start()
+      newQuery.confirmQuote(quote)
+    } else {
+      val targetQuery = this.bot.conversations.keys.find(_.recipient == receivedFrom).get
+      targetQuery.confirmQuote(quote)
+    }
+   }
+  
+  def historyQuote(out: BufferedWriter, receivedFrom: String, params: String) = {
+    val messageNumber: String = params.dropWhile(_ == 'N').lift(1).getOrElse("-1").toString.trim()
+    if(messageNumber == "-1" || messageNumber.toInt > this.historySize){
+      this.sendMessage(out, "Syntax error: could not find the message.", receivedFrom)
+    } else {
+      val quoteString = this.messageHistory(this.messageHistory.size - 1 - messageNumber.toInt)._2
+      // TODO: manipulate string to find out quote and author, send to Query
+    }
+  }
+  
   def takeLine(line: (Long, String), nick: String): Unit
+  
+  def confirmQuote(quote: String): Unit
   
 }

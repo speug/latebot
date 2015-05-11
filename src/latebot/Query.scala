@@ -58,5 +58,18 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     Thread.sleep(86400000)
     this.bot.blackList -= chatter
   }
+  
+  def confirmQuote(quoteToConfirm: String) = this.synchronized {
+    this.sendMessage(out, "Do you wish to add the following quote?", this.recipient)
+    this.sendMessage(out, quoteToConfirm, this.recipient)
+    this.sendMessage(out, "[y/n]", this.recipient)
+    while(this.incoming.isEmpty){
+      this.wait()
+    } 
+    if(this.incoming.dequeue._2.trim.equalsIgnoreCase("y")){
+      this.bot.writeToFile("quotes.txt", quoteToConfirm)
+      this.sendMessage(out, "The quote has been saved.", this.recipient)
+    }
+  }
 
 }

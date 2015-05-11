@@ -66,5 +66,8 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     this.sendMessage(out, "Banning " + spammer.nick + " at " + this.recipient, "speug")
   }
   
+  def confirmQuote(toBeConfirmed: String) = {
+    println("Cannot confirm quote; this is a Conversation.")
+  }
   
 }
