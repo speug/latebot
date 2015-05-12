@@ -59,17 +59,21 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     this.bot.blackList -= chatter
   }
   
-  def confirmQuote(quoteToConfirm: String) = this.synchronized {
+  def confirmQuote(quoteToConfirm: String) = {
     this.sendMessage(out, "Do you wish to add the following quote?", this.recipient)
     this.sendMessage(out, quoteToConfirm, this.recipient)
     this.sendMessage(out, "[y/n]", this.recipient)
     while(this.incoming.isEmpty){
-      println("No messages yet.")
-      Thread.sleep(1000)
+      this.synchronized {
+      //println("No messages yet.")
+      this.wait()
+      }
     } 
     if(this.incoming.dequeue._2.split(":").last.trim().equalsIgnoreCase("y")){
       this.bot.writeToFile("quotes.txt", quoteToConfirm)
       this.sendMessage(out, "The quote has been saved.", this.recipient)
+    } else {
+      this.sendMessage(out, "The quote was discarded.", this.recipient)
     }
   }
 

@@ -12,60 +12,71 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
 
   private val random = new Random
   private var stop = false
+  private var savingQuote = false
+  private var quoteToConfirm = ""
 
   val helpMessage =
-    """LATEBOT v0.5(semi-stable) -BRINGING YOU THE GENUINE LATE EXPERIENCE DIGITALLY SINCE 2015-
-
-			Tämänhetkiset ominaisuudet
-			!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
-			!dice <x>d<y>     Heittää x kappaletta y-tahkoista noppaa.
-			!planned          Tulostaa suunnittellut ominaisuudet.
-			!changelog        Tulostaa viimeaikaiset muutokset.
-			!bigredbutton     Elä kajoa.
-			!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
-
-			Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
+    """LATEBOT v0.6(updated / ;_; n-neutered) -Quotable-
+ 
+Tämänhetkiset ominaisuudet
+!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
+!dice <x>d<y>     Heittää x kappaletta y-tahkoista noppaa.
+!planned          Tulostaa suunnittellut ominaisuudet.
+!changelog        Tulostaa viimeaikaiset muutokset.
+!bigredbutton     Elä kajoa.
+!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
+!stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
+!quote            Lukee lainauksen aikamme sankareilta
+!quote "<quote>" -<author>: lisää lainauksen tietokantaan
+!quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
+ 
+Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
 
   def findCommand(line: String) = {
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
   }
 
   def run(): Unit = {
-    this.synchronized {
-      while (!this.stop) {
-        if (!this.incoming.isEmpty) {
-          val line = this.incoming.dequeue()
-          val lineString = line._2
-          var nick = ""
-          var receivedFrom = ""
-          val dataSplit = lineString.split(":")
-          if (lineString.contains("PRIVMSG")) {
-            nick = dataSplit(1).split("!")(0)
-            receivedFrom = this.address(lineString)
-          }
-          val command = findCommand(lineString)
-          if (lineString.contains("PRIVMSG")) {
-            nick = dataSplit(1).split("!")(0)
-            receivedFrom = this.address(lineString)
-            this.takeLine(line, nick)
-          }
-          command match {
-            case "!answer" => this.eightBall(out, receivedFrom)
-            case "!dice" => this.dice(lineString, out, receivedFrom)
-            case "!help" => this.scroller(out, nick, helpMessage)
-            case "!terminate" => this.terminate(out, nick)
-            case "!bigredButton" => this.bigRedButton(out, nick)
-            case "!relay" => this.relay(out, lineString)
-            case "!opme" => this.opme(out, nick)
-            case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
-            case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
-            case "!stats" => this.stats(out)
-            case "!quote" => this.quote(out, lineString)
-            case _ =>
-          }
-          //println(this.recipient + " going into wait mode.")
+    while (!this.stop) {
+      if (!this.incoming.isEmpty && !this.savingQuote) {
+        val line = this.incoming.dequeue()
+        val lineString = line._2
+        var nick = ""
+        var receivedFrom = ""
+        val dataSplit = lineString.split(":")
+        if (lineString.contains("PRIVMSG")) {
+          nick = dataSplit(1).split("!")(0)
+          receivedFrom = this.address(lineString)
+        }
+        val command = findCommand(lineString)
+        if (lineString.contains("PRIVMSG")) {
+          nick = dataSplit(1).split("!")(0)
+          receivedFrom = this.address(lineString)
+          this.takeLine(line, nick)
+        }
+        command match {
+          case "!answer" => this.eightBall(out, receivedFrom)
+          case "!dice" => this.dice(lineString, out, receivedFrom)
+          case "!help" => this.scroller(out, nick, helpMessage)
+          case "!terminate" => this.terminate(out, nick)
+          case "!bigredButton" => this.bigRedButton(out, nick)
+          case "!relay" => this.relay(out, lineString)
+          case "!opme" => this.opme(out, nick)
+          case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
+          case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
+          case "!stats" => this.stats(out)
+          case "!quote" => this.quote(out, lineString)
+          case _ =>
+        }
+      } else if(this.savingQuote){
+        this.confirmQuote(this.quoteToConfirm)
+        this.quoteToConfirm = ""
+        this.savingQuote = false
+      } else {
+        this.synchronized {
+          // println(this.recipient + " going into wait mode.")
           this.wait()
-          //println(this.recipient + " has been notified.")
+          // println(this.recipient + " has been notified.")
         }
       }
     }
@@ -226,7 +237,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
     }
   }
 
-  def addQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = this.bot.synchronized {
+  def addQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = {
     params(0) match {
       case '"' => this.textQuote(out, lineString, nick, receivedFrom, params)
       case 'N' => this.historyQuote(out, nick, receivedFrom, params)
@@ -234,7 +245,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
     }
   }
 
-  def textQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = this.bot.synchronized {
+  def textQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = {
     var quote = lineString.split("!quote ")(1).dropWhile(_ != '\"')
     val authorBlock = lineString.split("!quote ")(1).dropWhile(_ != '-')
     if (authorBlock == "-") {
@@ -247,10 +258,13 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
     } else if (!this.bot.conversations.keys.find(_.recipient == nick).isDefined) {
       val newQuery = this.bot.addConversation(nick, out)
       new Thread(newQuery).start()
-      newQuery.confirmQuote(quote)
+      newQuery.addQuoteToConfirm(quote)
     } else {
       val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
-      targetQuery.confirmQuote(quote)
+      targetQuery.synchronized {
+      targetQuery.addQuoteToConfirm(quote)
+      targetQuery.notify()
+      }
     }
   }
 
@@ -262,15 +276,18 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
       val quoteString = this.messageHistory(this.messageHistory.size - 1 - messageNumber.toInt)._2
       val quote = quoteString.split(":").last
       val author = quoteString.split(":")(1).split("!")(0)
-      if (this.alreadyQuoted(quote)) {
+      if (this.alreadyQuoted("\"" + quote + "\"" + " -" + author)) {
         this.sendMessage(out, "Quote already saved.", receivedFrom)
       } else if (!this.bot.conversations.keys.find(_.recipient == nick).isDefined) {
         val newQuery = this.bot.addConversation(nick, out)
         new Thread(newQuery).start()
-        newQuery.confirmQuote("\"" + quote + "\"" + " -" + author)
+        newQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
       } else {
         val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
-        targetQuery.confirmQuote("\"" + quote + "\"" + " -" + author)
+        targetQuery.synchronized {
+        targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
+        targetQuery.notify()
+        }
       }
     }
   }
@@ -288,6 +305,11 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
     val lines = file.getLines().toVector
     file.close()
     lines.find(_ == quote).isDefined
+  }
+  
+  def addQuoteToConfirm(quote: String) = {
+    this.quoteToConfirm = quote
+    this.savingQuote = true
   }
 
   def takeLine(line: (Long, String), nick: String): Unit

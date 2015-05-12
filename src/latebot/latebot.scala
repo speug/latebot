@@ -26,7 +26,7 @@ class latebot {
    */
   
 // Construction parameters
-  val myNick = "latebotten"
+  val myNick = "latebot"
   val ircBotDescription = ":All hail the new robot overlord!"
   var homeChannel = "#latenkatyrit"
   val random = new Random
@@ -48,13 +48,13 @@ Tämänhetkiset ominaisuudet
 !bigredbutton     Elä kajoa.
 !terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
-!quote            Lukee lainauksen aikamme sankarilta
-!quote "<quote>" -<author> lisää lainauksen tietokantaan
+!quote            Lukee lainauksen aikamme sankareilta
+!quote "<quote>" -<author>: lisää lainauksen tietokantaan
 !quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
   val hello = """LATEBOT v0.6(somewhat >100% CPU edition / ;_; n-neutered) -Quotable-
-Try the new !quote-command.
+Try the new !quote command.
 Beep boop."""
   
   /**
@@ -204,8 +204,7 @@ Beep boop."""
             }
             // react to command words or transfer line to a conversation
             this.findCommand(lineString) match {
-              case "!keelover"    =>
-                this.shutDownBroadcast(out); this.conversations.keys.foreach(_.kill); return
+              case "!keelover"    => this.shutDown(out); return
               case "!join"        => this.joinChannel(lineString, out, "line")
               case "!cleanse"     => this.cleanReputation(nick)
               case "!relay"       => this.relay(out, lineString)
@@ -224,10 +223,46 @@ Beep boop."""
       }
     }
   }
-
+/**
+ * Tests the maintenance method. Used for debugging.
+ * 
+ * @param line the line-time tuple passed from the main loop
+ * @tparam line (Long, String)
+ * @param out the output to server writer
+ * @tparam out BufferedWriter
+ */
   def maintenanceTest(line: (Long, String), out: BufferedWriter) = {
     this.maintenance(line, out)
   }
+  
+  /**
+   * Parts all channels, kills all threads and returns to the main loop,
+   * where the main loop is broken via return.
+   * 
+   * @param out the output writer
+   * @tparam out BufferedWriter
+   */
+  def shutDown(out: BufferedWriter) = {
+    this.shutDownBroadcast(out)
+    this.conversations.keys.foreach(_.kill)
+    for(conversation <- this.conversations.keys){
+      conversation.synchronized{
+        conversation.notify()
+      }
+    }
+  }
+  
+  /**
+   * Maintains the bot. Completes the following tasks:
+   * 1. Attempts to join home channel
+   * 2. Kills querys that have been inactive for 24h.
+   * 3. Forgives some spam
+   * 
+ 	 * @param line the line-time tuple passed from the main loop
+   * @tparam line (Long, String)
+   * @param out the output to server writer
+   * @tparam out BufferedWriter
+   */
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
     // attempts to join homechannel (just in case that has been kicked)
@@ -261,10 +296,26 @@ Beep boop."""
     }
   }
 
+  /**
+   * Parts all channels. Auxilliary method for latebot.shutDown()
+   * 
+   * @param out an output writer
+   * @tparam out BufferedWriter
+   */
   def shutDownBroadcast(out: BufferedWriter) = {
     this.conversations.keys.toVector.filter(_.isChannel).foreach((c: Conversation) => c.sendData(out, "PART " + c.recipient + " :You may have killed me, but the idea lives on!"))
   }
-
+  
+  /**
+   * Places the line passed on from the main loop to the corresponding conversations
+   * incoming message queue. If the desired conversation does not exist, starts one.
+   * Notifies the conversation thread that new input is available.
+ 	 * 
+ 	 * @param line the line-time tuple passed from the main loop
+   * @tparam line (Long, String)
+   * @param out the output to server writer
+   * @tparam out BufferedWriter
+   */
   def placeLine(line: (Long, String), receivedFrom: String, out: BufferedWriter) = {
     if (receivedFrom.lift(0).isDefined) {
       if (!this.conversations.find(_._1.recipient == receivedFrom).isDefined) {
@@ -281,6 +332,14 @@ Beep boop."""
     }
   }
 
+  /**
+ 	* Responds to server pings.
+ 	* 
+ 	* @param out an output writer
+ 	* @tparam out BufferedWriter
+ 	* @param dataSplit the data itself sent from the server
+ 	* @tparam dataSplit String
+ 	*/
   def pong(out: BufferedWriter, dataSplit: String) {
     if (dataSplit.substring(0, 4).equalsIgnoreCase("ping")) {
       val pongmsg = "pong " + dataSplit.substring(5)
