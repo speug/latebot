@@ -64,9 +64,10 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     this.sendMessage(out, quoteToConfirm, this.recipient)
     this.sendMessage(out, "[y/n]", this.recipient)
     while(this.incoming.isEmpty){
-      this.wait()
+      println("No messages yet.")
+      Thread.sleep(1000)
     } 
-    if(this.incoming.dequeue._2.trim.equalsIgnoreCase("y")){
+    if(this.incoming.dequeue._2.split(":").last.trim().equalsIgnoreCase("y")){
       this.bot.writeToFile("quotes.txt", quoteToConfirm)
       this.sendMessage(out, "The quote has been saved.", this.recipient)
     }

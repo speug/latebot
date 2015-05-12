@@ -6,8 +6,9 @@ import scala.util.Random
 import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
+import scala.util.Try
 
-abstract class Conversation(val recipient: String, val incoming: Queue[(Long,String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot, val historySize: Int, val messageHistory: Queue[(Long, String)]) extends Runnable {
+abstract class Conversation(val recipient: String, val incoming: Queue[(Long, String)], val out: BufferedWriter, val homeChannel: String, val bot: latebot, val historySize: Int, val messageHistory: Queue[(Long, String)]) extends Runnable {
 
   private val random = new Random
   private var stop = false
@@ -31,42 +32,43 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
 
   def run(): Unit = {
     this.synchronized {
-    while (!this.stop) {
-      if (!this.incoming.isEmpty) {
-        val line = this.incoming.dequeue()
-        val lineString = line._2
-        var nick = ""
-        var receivedFrom = ""
-        val dataSplit = lineString.split(":")
-        if (lineString.contains("PRIVMSG")) {
-          nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(lineString)
+      while (!this.stop) {
+        if (!this.incoming.isEmpty) {
+          val line = this.incoming.dequeue()
+          val lineString = line._2
+          var nick = ""
+          var receivedFrom = ""
+          val dataSplit = lineString.split(":")
+          if (lineString.contains("PRIVMSG")) {
+            nick = dataSplit(1).split("!")(0)
+            receivedFrom = this.address(lineString)
+          }
+          val command = findCommand(lineString)
+          if (lineString.contains("PRIVMSG")) {
+            nick = dataSplit(1).split("!")(0)
+            receivedFrom = this.address(lineString)
+            this.takeLine(line, nick)
+          }
+          command match {
+            case "!answer" => this.eightBall(out, receivedFrom)
+            case "!dice" => this.dice(lineString, out, receivedFrom)
+            case "!help" => this.scroller(out, nick, helpMessage)
+            case "!terminate" => this.terminate(out, nick)
+            case "!bigredButton" => this.bigRedButton(out, nick)
+            case "!relay" => this.relay(out, lineString)
+            case "!opme" => this.opme(out, nick)
+            case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
+            case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
+            case "!stats" => this.stats(out)
+            case "!quote" => this.quote(out, lineString)
+            case _ =>
+          }
+          //println(this.recipient + " going into wait mode.")
+          this.wait()
+          //println(this.recipient + " has been notified.")
         }
-        this.takeLine(line, nick)
-        val command = findCommand(lineString)
-        if (lineString.contains("PRIVMSG")) {
-          nick = dataSplit(1).split("!")(0)
-          receivedFrom = this.address(lineString)
-        }
-        command match {
-          case "!answer" => this.eightBall(out, receivedFrom)
-          case "!dice" => this.dice(lineString, out, receivedFrom)
-          case "!help" => this.scroller(out, nick, helpMessage)
-          case "!terminate" => this.terminate(out, nick)
-          case "!bigredButton" => this.bigRedButton(out, nick)
-          case "!relay" => this.relay(out, lineString)
-          case "!opme" => this.opme(out, nick)
-          case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
-          case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
-          case "!stats" => this.stats(out)
-          case _ =>
-        }
-        println(this.recipient + " going into wait mode.")
-        this.wait()
-        println(this.recipient + " has been notified.")
       }
     }
-  }
   }
 
   def sendData(out: BufferedWriter, ircDataOutput: String) = {
@@ -81,7 +83,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   def sendMessage(out: BufferedWriter, message: String, receiver: String) = {
     val toBeSent = "PRIVMSG " + receiver + " :" + message
     sendData(out, toBeSent)
-    this.messageHistory += ((System.currentTimeMillis(), toBeSent)) 
+    this.messageHistory += ((System.currentTimeMillis(), toBeSent))
   }
 
   def address(line: String): String = {
@@ -99,8 +101,8 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
       val parameters = line.split("!dice ")(1).split('d')
       var amount = parameters.lift(0).getOrElse("0").trim()
       var faces = parameters.lift(1).getOrElse("0").trim()
-      if (amount.forall(_.isDigit) && amount.length < 3 && !amount.isEmpty()) { amount = amount} else {amount = "0"}
-      if (faces.forall(_.isDigit) && faces.length < 5 && !faces.isEmpty()) { faces = faces } else {faces = "0"}
+      if (amount.forall(_.isDigit) && amount.length < 3 && !amount.isEmpty()) { amount = amount } else { amount = "0" }
+      if (faces.forall(_.isDigit) && faces.length < 5 && !faces.isEmpty()) { faces = faces } else { faces = "0" }
       if (amount == "0" || faces == "0") {
         sendMessage(out, "Tarkasta syntaksi, !dice (noppien lukumäärä)d(tahkojen lukumäärä)", this.homeChannel)
       } else {
@@ -156,7 +158,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
 
   def plannedFeatures(out: BufferedWriter, line: String, receivedFrom: String, nick: String) = {
     if (line.split("!planned ").lift(1).isDefined && line.split("!planned ")(1)(0) == 'g') {
-      this.fileReader(out, if(this.isChannel){this.recipient} else {this.homeChannel}, "plannedVersions.txt")
+      this.fileReader(out, if (this.isChannel) { this.recipient } else { this.homeChannel }, "plannedVersions.txt")
     } else {
       this.fileReader(out, nick, "plannedVersions.txt")
     }
@@ -165,102 +167,131 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long,Str
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
     var lines = Vector[String]()
     this.synchronized {
-    val file = Source.fromFile(filename)
-    lines = file.getLines.toVector
-    file.close()
+      val file = Source.fromFile(filename)
+      lines = file.getLines.toVector
+      file.close()
     }
-      lines.foreach(sendMessage(out, _, receivedFrom))
+    lines.foreach(sendMessage(out, _, receivedFrom))
   }
- 
-  
+
   def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
-  var lines = Vector[String]()
+    var lines = Vector[String]()
     this.bot.synchronized {
-    val file = Source.fromFile(filename)
-    lines = file.getLines.toVector
-    file.close()
+      val file = Source.fromFile(filename)
+      lines = file.getLines.toVector
+      file.close()
     }
     this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
   }
-  
+
   def isChannel = {
     this.recipient(0) == '#'
   }
-  
+
   def addToHistory(line: (Long, String)) = {
-    if(this.messageHistory.size >= this.historySize){
+    if (this.messageHistory.size >= this.historySize) {
       this.messageHistory.dequeue()
     }
     this.messageHistory += line
   }
-  
+
   def lastMessage = {
     this.messageHistory(this.messageHistory.size - 1)
   }
-  
+
   def stats(out: BufferedWriter) = {
     this.sendMessage(out, "LATEBOT STATUS", this.recipient)
-    this.sendMessage(out, "Current uptime: " + this.bot.convertTime(System.currentTimeMillis () - this.bot.startingTime), this.recipient)
-    this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis () - this.bot.lastCheck), this.recipient)
-    this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ",", ","."), this.recipient)
+    this.sendMessage(out, "Current uptime: " + this.bot.convertTime(System.currentTimeMillis() - this.bot.startingTime), this.recipient)
+    this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis() - this.bot.lastCheck), this.recipient)
+    this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ", ", ", "."), this.recipient)
     this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
     if (!this.bot.blackList.keys.isEmpty) {
-      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ",", ","."), this.recipient)
+      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
     }
     this.sendMessage(out, "All systems nominal", this.recipient)
   }
-  
+
   def kill = {
     println("Killing thread at: " + this.recipient)
     this.stop = true
   }
-  
-  
+
   def quote(out: BufferedWriter, lineString: String) = this.bot.synchronized {
     val params = lineString.split("!quote ").lift(1).getOrElse("empty")
-    if(params == "empty"){
+    if (params == "empty") {
       this.randomReader(out, this.address(lineString), "quotes.txt")
     } else {
-      this.addQuote(out, lineString, this.address(lineString), params)
+      val nick = lineString.split(":")(1).split("!")(0)
+      this.addQuote(out, lineString, nick, this.address(lineString), params)
     }
   }
- 
-    
-  def addQuote(out: BufferedWriter, lineString: String, receivedFrom: String, params: String) = this.bot.synchronized {
+
+  def addQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = this.bot.synchronized {
     params(0) match {
-      case '"' => this.textQuote(out, lineString, receivedFrom, params)
-      case 'N' => this.historyQuote(out, receivedFrom, params)
+      case '"' => this.textQuote(out, lineString, nick, receivedFrom, params)
+      case 'N' => this.historyQuote(out, nick, receivedFrom, params)
       case _ => this.sendMessage(out, "Syntax error: start the quote with either \" or N.", receivedFrom)
     }
   }
-  
-  def textQuote(out: BufferedWriter, lineString: String, receivedFrom: String, params: String) = this.bot.synchronized {
-    val quote = lineString.split("!quote ")(1).dropWhile(_ != '\"').takeWhile(_ != '\"')
-    val authorBlock = lineString.split("!quote ")(1).dropWhile(_ != '\"').dropWhile(_ != '\"')
-    if(!authorBlock.lift(0).isDefined || !authorBlock.lift(1).isDefined || (authorBlock(0) != '-' && authorBlock(1) != '-')){
+
+  def textQuote(out: BufferedWriter, lineString: String, nick: String, receivedFrom: String, params: String) = this.bot.synchronized {
+    var quote = lineString.split("!quote ")(1).dropWhile(_ != '\"')
+    val authorBlock = lineString.split("!quote ")(1).dropWhile(_ != '-')
+    if (authorBlock == "-") {
+      quote += "anonymous"
+    }
+    if (!authorBlock.lift(0).isDefined || !authorBlock.lift(1).isDefined || authorBlock.isEmpty) {
       this.sendMessage(out, "Syntax error: the quote must be entered as \"<quote>\" -<author>.", receivedFrom)
-    } else if(!this.bot.conversations.keys.find(_.recipient == receivedFrom).isDefined) {
-      val newQuery = this.bot.addConversation(receivedFrom, out)
+    } else if (this.alreadyQuoted(quote)) {
+      this.sendMessage(out, "Quote already saved.", receivedFrom)
+    } else if (!this.bot.conversations.keys.find(_.recipient == nick).isDefined) {
+      val newQuery = this.bot.addConversation(nick, out)
       new Thread(newQuery).start()
       newQuery.confirmQuote(quote)
     } else {
-      val targetQuery = this.bot.conversations.keys.find(_.recipient == receivedFrom).get
+      val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
       targetQuery.confirmQuote(quote)
     }
-   }
-  
-  def historyQuote(out: BufferedWriter, receivedFrom: String, params: String) = {
-    val messageNumber: String = params.dropWhile(_ == 'N').lift(1).getOrElse("-1").toString.trim()
-    if(messageNumber == "-1" || messageNumber.toInt > this.historySize){
+  }
+
+  def historyQuote(out: BufferedWriter, nick: String, receivedFrom: String, params: String) = {
+    val messageNumber: String = params.split("N").lift(1).getOrElse("-1").trim()
+    if (messageNumber == "-1" || !this.stringToInt(messageNumber).isDefined || this.stringToInt(messageNumber).get > this.historySize) {
       this.sendMessage(out, "Syntax error: could not find the message.", receivedFrom)
     } else {
       val quoteString = this.messageHistory(this.messageHistory.size - 1 - messageNumber.toInt)._2
-      // TODO: manipulate string to find out quote and author, send to Query
+      val quote = quoteString.split(":").last
+      val author = quoteString.split(":")(1).split("!")(0)
+      if (this.alreadyQuoted(quote)) {
+        this.sendMessage(out, "Quote already saved.", receivedFrom)
+      } else if (!this.bot.conversations.keys.find(_.recipient == nick).isDefined) {
+        val newQuery = this.bot.addConversation(nick, out)
+        new Thread(newQuery).start()
+        newQuery.confirmQuote("\"" + quote + "\"" + " -" + author)
+      } else {
+        val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
+        targetQuery.confirmQuote("\"" + quote + "\"" + " -" + author)
+      }
     }
   }
-  
+
+  def stringToInt(s: String) = {
+    try {
+      Some(s.toInt)
+    } catch {
+      case e: NumberFormatException => None
+    }
+  }
+
+  def alreadyQuoted(quote: String) = this.bot.synchronized {
+    val file = Source.fromFile("quotes.txt")
+    val lines = file.getLines().toVector
+    file.close()
+    lines.find(_ == quote).isDefined
+  }
+
   def takeLine(line: (Long, String), nick: String): Unit
-  
+
   def confirmQuote(quote: String): Unit
-  
+
 }

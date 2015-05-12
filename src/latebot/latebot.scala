@@ -38,7 +38,7 @@ class latebot {
   private var printMessagesToConsole = true
   val currentVersion = "0.5.3"
   val helpMessage =
-    """LATEBOT v0.5(!volatile! / ;_; n-neutered) -OBJECTS EVERYWHERE-
+    """LATEBOT v0.6(updated / ;_; n-neutered) -Quotable-
  
 Tämänhetkiset ominaisuudet
 !answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -48,9 +48,13 @@ Tämänhetkiset ominaisuudet
 !bigredbutton     Elä kajoa.
 !terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
+!quote            Lukee lainauksen aikamme sankarilta
+!quote "<quote>" -<author> lisää lainauksen tietokantaan
+!quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.5(>100% CPU edition / ;_; n-neutered) -Lean mean irkking machine-
+  val hello = """LATEBOT v0.6(somewhat >100% CPU edition / ;_; n-neutered) -Quotable-
+Try the new !quote-command.
 Beep boop."""
   
   /**
@@ -413,9 +417,9 @@ Beep boop."""
     }
   }
   
-  def writeToFile(fileName: String, toBeWritten: String) = this.synchronized {
+    def writeToFile(fileName: String, toBeWritten: String) = this.synchronized {
     val writer = new FileWriter(fileName, true)
-    writer.write(toBeWritten)
+    writer.write(toBeWritten + System.lineSeparator())
     writer.close()
     println("Wrote [" + toBeWritten + "] to file " + fileName)
   }
