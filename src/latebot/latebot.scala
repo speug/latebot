@@ -36,24 +36,9 @@ class latebot {
   var lastCheck: Long = 0
   var startingTime: Long = 0
   private var printMessagesToConsole = true
-  val currentVersion = "0.5.3"
-  val helpMessage =
-    """LATEBOT v0.6(updated / ;_; n-neutered) -Quotable-
- 
-Tämänhetkiset ominaisuudet
-!answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
-!dice <x>d<y>     Heittää x kappaletta y-tahkoista noppaa.
-!planned          Tulostaa suunnittellut ominaisuudet.
-!changelog        Tulostaa viimeaikaiset muutokset.
-!bigredbutton     Elä kajoa.
-!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
-!stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
-!quote            Lukee lainauksen aikamme sankareilta
-!quote "<quote>" -<author>: lisää lainauksen tietokantaan
-!quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
- 
-Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
-  val hello = """LATEBOT v0.6(somewhat >100% CPU edition / ;_; n-neutered) -Quotable-
+  val currentVersion = "0.6.3"
+  
+  val hello = """LATEBOT v0.6(ancient java compatible / ;_; n-neutered) -Quotable-
 Try the new !quote command.
 Beep boop."""
   
@@ -478,7 +463,7 @@ Beep boop."""
   
     def writeToFile(fileName: String, toBeWritten: String) = this.synchronized {
     val writer = new FileWriter(fileName, true)
-    writer.write(toBeWritten + System.lineSeparator())
+    writer.write(toBeWritten + System.getProperty("line.separator"))
     writer.close()
     println("Wrote [" + toBeWritten + "] to file " + fileName)
   }
