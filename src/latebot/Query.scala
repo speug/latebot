@@ -30,10 +30,11 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
   
   def spam(spammer: Chatter, out: BufferedWriter) = {
     this.bot.blackList(spammer) match{
-      case 0 => 
-      case 1 => this.warn(spammer, out)
-      case 2 => this.warn(spammer, out)
-      case 3 => this.sleep()
+//      case 0 => 
+//      case 1 => this.warn(spammer, out)
+//      case 2 => this.warn(spammer, out)
+//      case 3 => this.sleep()
+		case _ =>
     }
     
   }
