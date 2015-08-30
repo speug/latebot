@@ -26,8 +26,8 @@ class latebot {
    */
   
 // Construction parameters
-  val myNick = "latebot"
-  val ircBotDescription = ":All hail the new robot overlord!"
+  var myNick = "latebot"
+  var ircBotDescription = ":All hail the new robot overlord!"
   var homeChannel = "#latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
@@ -112,8 +112,14 @@ Beep boop."""
 
   def settingUp(connect: Socket, out: BufferedWriter, in: BufferedReader): Unit = {
     println("Starting latebot...")
+    do{
     this.homeChannel = Option[String](readLine("Desired homechannel: ")).getOrElse(this.homeChannel)
+    this.myNick = Option[String](readLine("Desired nick: ")).getOrElse(this.myNick)
+    this.ircBotDescription = Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
     println("Homechannel set to " + this.homeChannel)
+    println("Nick set to " + this.myNick)
+    println("Bot description: ")
+    } while(readLine("Satisfied with the settings? (y/n)") != "y")
     sendData(out, "NICK " + myNick)
     sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
     sendData(out, "JOIN " + homeChannel)
@@ -259,7 +265,7 @@ Beep boop."""
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
     val removedQuerys = Buffer[Conversation]()
     for (query <- querys) {
-      if (line._1 - query.lastMessage._1 < 86400000) {
+      if (line._1 - query.lastMessage._1 < 86400000 && this.address(line._2) != query.recipient) {
         this.conversations -= query
         removedQuerys += query
         query.kill
