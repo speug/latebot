@@ -115,10 +115,10 @@ Beep boop."""
     do{
     this.homeChannel = Option[String](readLine("Desired homechannel: ")).getOrElse(this.homeChannel)
     this.myNick = Option[String](readLine("Desired nick: ")).getOrElse(this.myNick)
-    this.ircBotDescription = Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
+    this.ircBotDescription = ":" + Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
     println("Homechannel set to " + this.homeChannel)
     println("Nick set to " + this.myNick)
-    println("Bot description: ")
+    println("Bot description: " + ircBotDescription.dropWhile(_ == ':'))
     } while(readLine("Satisfied with the settings? (y/n)") != "y")
     sendData(out, "NICK " + myNick)
     sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
@@ -192,6 +192,9 @@ Beep boop."""
             if (lineString.contains("+o") && lineString.contains(this.myNick)) {
               val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
               if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
+            }
+            if (lineString.contains("JOIN")){
+              this.
             }
             // react to command words or transfer line to a conversation
             this.findCommand(lineString) match {
@@ -473,4 +476,8 @@ Beep boop."""
     writer.close()
     println("Wrote [" + toBeWritten + "] to file " + fileName)
   }
+    
+    def helpNewUser(lineString: String) = {
+      
+    }
 }
