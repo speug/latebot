@@ -177,7 +177,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
 
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
     var lines = Vector[String]()
-    this.synchronized {
+    this.bot.synchronized {
       val file = Source.fromFile(filename)
       lines = file.getLines.toVector
       file.close()

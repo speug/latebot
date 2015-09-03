@@ -31,6 +31,7 @@ class latebot {
   var homeChannel = "#latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
+  val tutorialModeConversations = Buffer[String]()
   val blackList = Map[Chatter, Int]()
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
@@ -193,9 +194,9 @@ Beep boop."""
               val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
               if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
             }
-            if (lineString.contains("JOIN")){
-              this.
-            }
+            if (lineString.contains("JOIN")) {
+              this.helpNewUser(lineString, out)
+              }
             // react to command words or transfer line to a conversation
             this.findCommand(lineString) match {
               case "!keelover"    => this.shutDown(out); return
@@ -477,7 +478,37 @@ Beep boop."""
     println("Wrote [" + toBeWritten + "] to file " + fileName)
   }
     
-    def helpNewUser(lineString: String) = {
-      
+    def helpNewUser(lineString: String, out:BufferedWriter) = {
+      val channelName = lineString.split("JOIN ")(1)
+      if(tutorialModeConversations.contains(channelName)){
+        val recipient = lineString.dropWhile(_ == ':').takeWhile(_ != '!')
+        println("Tutoring user " + recipient + " at " + channelName + ".")
+        conversations.keys.find(_.recipient == channelName).get.fileReader(out, recipient, "irchelpmessage.txt")
+      }
     }
+    
+    def addTutorialModeChannel(lineString: String, receivedFrom:String, out:BufferedWriter) = {
+      val channelToTutor = lineString.split("!addtutorial ").lift(1).getOrElse("empty")
+      if(channelToTutor != "empty" && !this.tutorialModeConversations.contains(channelToTutor)){
+        this.tutorialModeConversations += channelToTutor
+        this.sendMessage(out, channelToTutor + " has been added to tutored channels.", receivedFrom)
+      } else if(channelToTutor == "empty"){
+        this.sendMessage(out, "Syntax error", receivedFrom)
+      } else {
+        this.sendMessage(out, channelToTutor + " is already tutored.", receivedFrom)
+      }
+    }
+    
+    def removeTutorialModeChannel(lineString: String, receivedFrom: String, out:BufferedWriter) = {
+      val channelToRemove = lineString.split("!removetutorial ").lift(1).getOrElse("empty")
+      if(channelToRemove != "empty" && this.tutorialModeConversations.contains(channelToRemove)){
+        this.tutorialModeConversations -= channelToRemove
+        this.sendMessage(out, channelToRemove + " has been removed from tutored channels.", receivedFrom)
+      } else if(channelToRemove == "empty"){
+        this.sendMessage(out, "Syntax error", receivedFrom)
+      } else {
+        this.sendMessage(out, channelToRemove + " is not tutored.", receivedFrom)
+      }
+    }
+    
 }
