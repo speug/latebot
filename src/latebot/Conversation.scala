@@ -16,7 +16,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
   private var quoteToConfirm = ""
 
   val helpMessage =
-    """LATEBOT v0.6(updated / ;_; n-neutered) -Quotable-
+    """LATEBOT v0.9(ancient java compatible / helpful edition) -Quotable-
  
 Tämänhetkiset ominaisuudet
 !answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -24,7 +24,7 @@ Tämänhetkiset ominaisuudet
 !planned          Tulostaa suunnittellut ominaisuudet.
 !changelog        Tulostaa viimeaikaiset muutokset.
 !bigredbutton     Elä kajoa.
-!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
+!terminate        Terminoi.
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
 !quote            Lukee lainauksen aikamme sankareilta
 !quote "<quote>" -<author>: lisää lainauksen tietokantaan

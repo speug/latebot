@@ -37,7 +37,7 @@ class latebot {
   var lastCheck: Long = 0
   var startingTime: Long = 0
   private var printMessagesToConsole = true
-  val currentVersion = "0.6.3"
+  val currentVersion = "0.9"
   
   val hello = """LATEBOT v0.9(ancient java compatible / helpful edition) -Quotable-
 Try the new !quote command.
