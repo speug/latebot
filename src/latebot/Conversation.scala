@@ -28,7 +28,8 @@ Tämänhetkiset ominaisuudet
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
 !quote            Lukee lainauksen aikamme sankareilta
 !quote "<quote>" -<author>: lisää lainauksen tietokantaan
-!quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
+!quote N#         lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
+!irchelp          lähettää irc-apuviestin
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
 
@@ -216,10 +217,10 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis() - this.bot.lastCheck), this.recipient)
     this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ", ", ", "."), this.recipient)
     this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
-    if (!this.bot.blackList.keys.isEmpty) {
-      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
-    }
-    this.sendMessage(out, "All systems nominal", this.recipient)
+/*    if (!this.bot.blackList.keys.isEmpty) {
+*      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
+*   }
+*/    this.sendMessage(out, "All systems nominal", this.recipient)
   }
 
   def kill = {

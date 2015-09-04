@@ -39,7 +39,7 @@ class latebot {
   private var printMessagesToConsole = true
   val currentVersion = "0.6.3"
   
-  val hello = """LATEBOT v0.6(ancient java compatible / ;_; n-neutered) -Quotable-
+  val hello = """LATEBOT v0.9(ancient java compatible / helpful edition) -Quotable-
 Try the new !quote command.
 Beep boop."""
   
@@ -101,7 +101,8 @@ Beep boop."""
   
   /**
    * Connects the bot to the server, then calls the main loop of the bot.
-   * Returns nothing.
+   * Returns nothing. Allows the user to choose home channel, nick and description.
+   * If no input is given, uses the hardcoded default options.
    * 
    * @param connect the socket through which communication between the server is handled
    * @tparam connect Socket
@@ -116,13 +117,13 @@ Beep boop."""
     do{
     this.homeChannel = Option[String](readLine("Desired homechannel: ")).getOrElse(this.homeChannel)
     this.myNick = Option[String](readLine("Desired nick: ")).getOrElse(this.myNick)
-    this.ircBotDescription = ":" + Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
+    this.ircBotDescription = Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
     println("Homechannel set to " + this.homeChannel)
     println("Nick set to " + this.myNick)
-    println("Bot description: " + ircBotDescription.dropWhile(_ == ':'))
+    println("Bot description: " + ircBotDescription)
     } while(readLine("Satisfied with the settings? (y/n)") != "y")
     sendData(out, "NICK " + myNick)
-    sendData(out, "USER " + myNick + " 8 * " + ircBotDescription)
+    sendData(out, "USER " + myNick + " 8 * " + ":" + ircBotDescription)
     sendData(out, "JOIN " + homeChannel)
     this.lastCheck = System.currentTimeMillis()
     this.startingTime = this.lastCheck
@@ -199,16 +200,19 @@ Beep boop."""
               }
             // react to command words or transfer line to a conversation
             this.findCommand(lineString) match {
-              case "!keelover"    => this.shutDown(out); return
-              case "!join"        => this.joinChannel(lineString, out, "line")
-              case "!cleanse"     => this.cleanReputation(nick)
-              case "!relay"       => this.relay(out, lineString)
-              case "!status"      => this.status
-              case "!maintenance" => this.maintenanceTest(line, out)
-              case "!printlines"  => this.messagePrintToggle
-              case "!birthday"    => this.birthday(out, in, lineString)
-              case "!part"        => this.part(out, lineString, receivedFrom)
-              case _              => this.placeLine(line, receivedFrom, out)
+              case "!keelover"        => this.shutDown(out); return
+              case "!join"            => this.joinChannel(lineString, out, "line")
+              case "!cleanse"         => this.cleanReputation(nick)
+              case "!relay"           => this.relay(out, lineString)
+              case "!status"          => this.status
+              case "!maintenance"     => this.maintenanceTest(line, out)
+              case "!printlines"      => this.messagePrintToggle
+              case "!birthday"        => this.birthday(out, in, lineString)
+              case "!part"            => this.part(out, lineString, receivedFrom)
+              case "!addtutorial"     => this.addTutorialModeChannel(lineString, receivedFrom, out)
+              case "!removetutorial"  => this.removeTutorialModeChannel(lineString, receivedFrom, out)
+              case _                  => this.placeLine(line, receivedFrom, out)
+              
             }
             // perform maintenance if more than 24h since last maintenance
             if (line._1 > this.lastCheck + 86400000) {
@@ -341,6 +345,12 @@ Beep boop."""
       sendData(out, pongmsg)
     }
   }
+  /**
+   * Finds the sender of the message.
+   * 
+   * @params line the line from which the address is to be found
+   * @returns the sender of the message
+   */
 
   def address(line: String): String = {
     var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
@@ -351,20 +361,44 @@ Beep boop."""
       recipent
     }
   }
-
+  /**
+   * Sends a desired message one line at the time.
+   * 
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * @params address the desired address for the message
+   * @tparams address String
+   * @params textToScroll the text which is to be sent one line at a time
+   * @tparams textToScroll String
+   */
   def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
     textToScroll.split("\n").foreach(sendMessage(out, _, address))
   }
 
-  // Välittää viestin sellaisenaan serverille
+  /**
+   * Relays the desired message "as is" to the server.
+   * 
+   *@params out an output writer
+   *@tparams out BufferedWriter
+   *@params line the line containing the command word and the relayed message
+   *@tparams line String
+   */
   def relay(out: BufferedWriter, line: String) = {
     this.sendData(out, line.split("!relay ")(1))
   }
-
+/**
+ * Main method for object for launching the bot.
+ */
   def main(cmd: Array[String]) {
     connect("irc.cs.hut.fi", 6668)
   }
 
+  /**
+   * Obsolete testing method for spammers. Adds a Chatter to the spammer list.
+   * 
+   * @params spammer the chatter to add to the list of known spammers
+   * @tparams spammer Chatter
+   */
   def addToBlackList(spammer: Chatter): Unit = {
     if (this.blackList.keys.find(_ == spammer).isDefined) {
       this.blackList(spammer) += 1
@@ -372,6 +406,13 @@ Beep boop."""
       this.blackList += spammer -> 1
     }
   }
+  
+  /**
+   * Obsolete testing method for spammers. Removes a Chatter from list of known spammers.
+   * 
+   * @params nick the nick to be removed from the list of known spammers
+   * @tparams nick String
+   */
 
   def cleanReputation(nick: String) = {
     val toClean = this.blackList.keys.find(_.nick == nick)
@@ -381,6 +422,19 @@ Beep boop."""
       println("Cleaned the reputation of " + nick)
     }
   }
+  
+  /**
+   * Creates a new conversation, be it either Channel or Query, adds it to the 
+   * collection Conversations along with its incoming message Queue, and returns
+   * the created conversation for launch.
+   * 
+   * @params recipient the desired recipient for the conversation
+   * @tparams recipient String
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * 
+   * @returns the created Conversation
+   */
 
   def addConversation(recipient: String, out: BufferedWriter) = {
     val newIncomingQueue = Queue[(Long, String)]()
@@ -388,27 +442,60 @@ Beep boop."""
     this.conversations += ((newConversation, newIncomingQueue))
     newConversation
   }
-  
+  /**
+   * Adds a new query. Works as this.addConversation. No idea if this is obsolete or not.
+   * 
+   * @params recipient the desired recipient for the conversation
+   * @tparams recipient String
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * 
+   * @returns the created Query
+   */
   def addQuery(recipient: String, out: BufferedWriter) = {
     val newIncomingQueue = Queue[(Long, String)]() 
     val newQuery = new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[(Long, String)])
     this.conversations += ((newQuery, newIncomingQueue))
     newQuery
   }
+  
+  /**
+   * Joins a new channel, creates the associated Channel object and starts it 
+   * in a new Thread. Sends the hardcoded hello-message to the new channel.
+   * 
+   * 
+   * @params line String containing the channel to be joined
+   * @tparams line String
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * @params input parameter to choose whether the method is called from the code or from user. if the parameter is "line" the input is from user, otherwise the method call is internal.
+   * @tparams input String
+   */
 
   def joinChannel(line: String, out: BufferedWriter, input: String) = {
     val channel = if (input == "line") { line.split("!join ")(1) } else { line }
     val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
     new Thread(newConversation).start()
+    this.scroller(out, newConversation.recipient, this.hello)
+    
   }
-
+/**
+ * Unbans user. Obsolete.
+ */
   def unBan(chatter: Chatter, channel: String, out: BufferedWriter) = {
     this.sendData(out, "MODE " + channel + " *" + chatter.hostmask + " -b")
     this.banList -= chatter
     println("Unbanned " + chatter.nick)
   }
-
+/**
+ * Hair hat solution for converting time from milliseconds to understanble text.
+ * 
+ * @params time System.currentTimeMillis()
+ * @tparams time Long
+ * 
+ * @returns the converted time in plaintext.
+ */
   def convertTime(time: Long) = {
     val days = time / 86400000
     val hours = (time - days * 86400000) / 3600000
@@ -417,6 +504,10 @@ Beep boop."""
     val millis = (time - days * 86400000 - hours * 3600000 - minutes * 60000 - seconds * 1000)
     days.toString + " days " + hours.toString() + " hours " + minutes.toString() + " minutes " + seconds.toString + "." + millis + " seconds"
   }
+  
+  /**
+   * Prints the current status of the bot to the console.
+   */
 
   def status = {
     println("Latebot STATUS:")
@@ -431,6 +522,10 @@ Beep boop."""
     }
     println("All systems nominal.")
   }
+  
+  /**
+   * Toggles whether all incoming lines are printed to console or not.
+   */
 
   def messagePrintToggle = {
     if (this.printMessagesToConsole) {
@@ -441,21 +536,38 @@ Beep boop."""
       this.printMessagesToConsole = true
     }
   }
+  
+  /**
+   * Celebrates birthday. Highly manual and works kinda wonky.
+   * 
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * @params in an input reader
+   * @tparams in BufferedReader
+   * @params lineString the line containing the command word and a birthday boy.
+   * @tparams lineString String
+   */
 
   def birthday(out: BufferedWriter, in: BufferedReader, lineString: String) = {
-    val birthdayBoy = lineString.split("!birthday ")(1)
-    val line = in.readLine()
-    if (line.contains(birthdayBoy)) {
-      this.sendData(out, "WHOIS " + birthdayBoy)
-      val credintials = in.readLine().split("latebot ")(1)
-      println("Received credintials: " + credintials)
-      this.sendMessage(out, "Happy Birthday to you", this.homeChannel)
-      this.sendMessage(out, "Happy Birthday to YOU", this.homeChannel)
-      this.sendMessage(out, "Happy Birthday to [" + credintials + "]", this.homeChannel)
-      this.sendMessage(out, "Happy Birthday to youuuuuuu", this.homeChannel)
-      this.sendMessage(out, "uuUUUUUUUUUUUUUUUUUUUUUUuuuuuuuuuuuuuuuuuuuuUUUUUUUUUU.", this.homeChannel)
+    val birthdayBoy = lineString.split("!birthday ").lift(1).getOrElse("empty")
+    if(birthdayBoy != "empty"){
+      val line = in.readLine()
+      if (line.contains(birthdayBoy)) {
+        this.sendData(out, "WHOIS " + birthdayBoy)
+        val credintials = in.readLine().split("latebot ")(1)
+        println("Received credintials: " + credintials)
+        this.sendMessage(out, "Happy Birthday to you", this.homeChannel)
+        this.sendMessage(out, "Happy Birthday to YOU", this.homeChannel)
+        this.sendMessage(out, "Happy Birthday to [" + credintials + "]", this.homeChannel)
+        this.sendMessage(out, "Happy Birthday to youuuuuuu", this.homeChannel)
+        this.sendMessage(out, "uuUUUUUUUUUUUUUUUUUUUUUUuuuuuuuuuuuuuuuuuuuuUUUUUUUUUU.", this.homeChannel)
+      }
     }
   }
+  
+  /**
+   * Parts a channel
+   */
 
   def part(out: BufferedWriter, lineString: String, nick: String) = {
     val params = lineString.split("!part ").lift(1)
@@ -479,7 +591,8 @@ Beep boop."""
   }
     
     def helpNewUser(lineString: String, out:BufferedWriter) = {
-      val channelName = lineString.split("JOIN ")(1)
+      println("Method called.")
+      val channelName = lineString.split("JOIN ")(1).dropWhile(_ == ':')
       if(tutorialModeConversations.contains(channelName)){
         val recipient = lineString.dropWhile(_ == ':').takeWhile(_ != '!')
         println("Tutoring user " + recipient + " at " + channelName + ".")
