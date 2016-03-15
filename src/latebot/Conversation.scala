@@ -16,7 +16,7 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
   private var quoteToConfirm = ""
 
   val helpMessage =
-    """LATEBOT v1.0(Release edition) -Quotable-
+    """LATEBOT v1.0(Release party?) -Quotable-
 Lähdekoodi: https://bitbucket.org/Speug/latebot
  
 Tämänhetkiset ominaisuudet

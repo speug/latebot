@@ -42,6 +42,7 @@ class latebot {
 
   val hello = """LATEBOT v1.0(Release build) -Quotable-
 Source at https://bitbucket.org/Speug/latebot
+Some things might be broken still
 Beep boop."""
 
   /**
