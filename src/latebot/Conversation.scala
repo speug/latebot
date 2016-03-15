@@ -16,7 +16,8 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
   private var quoteToConfirm = ""
 
   val helpMessage =
-    """LATEBOT v0.9(ancient java compatible / helpful edition) -Quotable-
+    """LATEBOT v1.0(Release edition) -Quotable-
+Lähdekoodi: https://bitbucket.org/Speug/latebot
  
 Tämänhetkiset ominaisuudet
 !answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -69,7 +70,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
           case "!quote" => this.quote(out, lineString)
           case _ =>
         }
-      } else if(this.savingQuote){
+      } else if (this.savingQuote) {
         this.confirmQuote(this.quoteToConfirm)
         this.quoteToConfirm = ""
         this.savingQuote = false
@@ -177,23 +178,31 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
-    var lines = Vector[String]()
-    this.bot.synchronized {
-      val file = Source.fromFile(filename)
-      lines = file.getLines.toVector
-      file.close()
+    try {
+      var lines = Vector[String]()
+      this.bot.synchronized {
+        val file = Source.fromFile(filename)
+        lines = file.getLines.toVector
+        file.close()
+      }
+      lines.foreach(sendMessage(out, _, receivedFrom))
+    } catch {
+      case nofile: FileNotFoundException => this.sendMessage(out, "Did not find file: " + filename, receivedFrom)
     }
-    lines.foreach(sendMessage(out, _, receivedFrom))
   }
 
   def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
-    var lines = Vector[String]()
-    this.bot.synchronized {
-      val file = Source.fromFile(filename)
-      lines = file.getLines.toVector
-      file.close()
+    try {
+      var lines = Vector[String]()
+      this.bot.synchronized {
+        val file = Source.fromFile(filename)
+        lines = file.getLines.toVector
+        file.close()
+      }
+      this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
+    } catch {
+      case nofile: FileNotFoundException => this.sendMessage(out, "Did not find file: " + filename, receivedFrom)
     }
-    this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
   }
 
   def isChannel = {
@@ -217,10 +226,10 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis() - this.bot.lastCheck), this.recipient)
     this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ", ", ", "."), this.recipient)
     this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
-/*    if (!this.bot.blackList.keys.isEmpty) {
+    /*    if (!this.bot.blackList.keys.isEmpty) {
 *      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
 *   }
-*/    this.sendMessage(out, "All systems nominal", this.recipient)
+*/ this.sendMessage(out, "All systems nominal", this.recipient)
   }
 
   def kill = {
@@ -263,8 +272,8 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     } else {
       val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
       targetQuery.synchronized {
-      targetQuery.addQuoteToConfirm(quote)
-      targetQuery.notify()
+        targetQuery.addQuoteToConfirm(quote)
+        targetQuery.notify()
       }
     }
   }
@@ -286,8 +295,8 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
       } else {
         val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
         targetQuery.synchronized {
-        targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
-        targetQuery.notify()
+          targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
+          targetQuery.notify()
         }
       }
     }
@@ -307,7 +316,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     file.close()
     lines.find(_ == quote).isDefined
   }
-  
+
   def addQuoteToConfirm(quote: String) = {
     this.quoteToConfirm = quote
     this.savingQuote = true
