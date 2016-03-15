@@ -33,6 +33,15 @@ Tämänhetkiset ominaisuudet
 !irchelp          lähettää irc-apuviestin
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
+  
+  /**
+   * Returns the command word in a given string.
+   *
+   * @param line a string possibly containing a keyword, marked with a '!'
+   * @tparam line String
+   *
+   * @returns a command word, if such exists; otherwise an empty string.
+   */
 
   def findCommand(line: String) = {
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()

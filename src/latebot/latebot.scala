@@ -63,7 +63,7 @@ Beep boop."""
   }
 
   /**
-   * Sends raw data to the server. Used for special communication with the server
+   * Sends raw data to the server. Used for more special communication with the server
    * than simple messages. Returns nothing.
    *
    * For example, sendData(out, "PART #latenkatyrit :So long!") sends a part message
@@ -572,7 +572,14 @@ Beep boop."""
   }
 
   /**
-   * Parts a channel
+   * Parts a channel. Returns nothing.
+   * 
+   * @params out an output writer
+   * @tparams out BufferedWriter
+   * @params lineString the line containing the command word and a birthday boy.
+   * @tparams lineString String
+   * @params nick the name of the channel
+   * @tparams nick String
    */
 
   def part(out: BufferedWriter, lineString: String, nick: String) = {
@@ -588,6 +595,10 @@ Beep boop."""
       this.sendData(out, "PART " + channel + " :" + partMessage)
     }
   }
+  
+  /**
+   * A simple file writer.
+   */
 
   def writeToFile(fileName: String, toBeWritten: String) = this.synchronized {
     try {
@@ -599,6 +610,10 @@ Beep boop."""
       case nofile: FileNotFoundException => println("No such file: " + fileName)
     }
   }
+  
+  /**
+   * Sends irchelgmessage.txt to a recipient.
+   */
 
   def helpNewUser(lineString: String, out: BufferedWriter) = {
     val channelName = lineString.split("JOIN ")(1).dropWhile(_ == ':')
@@ -608,7 +623,10 @@ Beep boop."""
       conversations.keys.find(_.recipient == channelName).get.fileReader(out, recipient, "irchelpmessage.txt")
     }
   }
-
+  /**
+   * Puts channel in tutorial mode. When in tutorial mode, the channel automatically sends irchelpmessage
+   * to every user joining the channel.
+   */
   def addTutorialModeChannel(lineString: String, receivedFrom: String, out: BufferedWriter) = {
     val channelToTutor = lineString.split("!addtutorial ").lift(1).getOrElse("empty")
     if (channelToTutor != "empty" && !this.tutorialModeConversations.contains(channelToTutor)) {
@@ -620,6 +638,10 @@ Beep boop."""
       this.sendMessage(out, channelToTutor + " is already tutored.", receivedFrom)
     }
   }
+  
+  /**
+   * Removes tutorial mode from a channel.
+   */
 
   def removeTutorialModeChannel(lineString: String, receivedFrom: String, out: BufferedWriter) = {
     val channelToRemove = lineString.split("!removetutorial ").lift(1).getOrElse("empty")
