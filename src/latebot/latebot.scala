@@ -29,7 +29,7 @@ class latebot {
   // Construction parameters
   var myNick = "latebot"
   var ircBotDescription = ":All hail the new robot overlord!"
-  var homeChannel = "#latenkatyrit"
+  var homeChannel = "!latenkatyrit"
   val random = new Random
   val conversations = Map[Conversation, Queue[(Long, String)]]()
   val tutorialModeConversations = Buffer[String]()
@@ -38,7 +38,7 @@ class latebot {
   var lastCheck: Long = 0
   var startingTime: Long = 0
   private var printMessagesToConsole = true
-  val currentVersion = "0.9"
+  val currentVersion = "1.0"
 
   val hello = """LATEBOT v1.0(Release build) -Quotable-
 Source at https://bitbucket.org/Speug/latebot
@@ -116,9 +116,12 @@ Beep boop."""
   def settingUp(connect: Socket, out: BufferedWriter, in: BufferedReader): Unit = {
     println("Starting latebot...")
     do {
-      this.homeChannel = Option[String](readLine("Desired homechannel: ")).getOrElse(this.homeChannel)
-      this.myNick = Option[String](readLine("Desired nick: ")).getOrElse(this.myNick)
-      this.ircBotDescription = Option[String](readLine("Description of the bot: ")).getOrElse(this.ircBotDescription)
+      val newChannel = readLine("Desired homechannel: ")
+      this.homeChannel = if(!newChannel.isEmpty){ newChannel} else {this.homeChannel}
+      val newNick = readLine("Desired nick: ")
+      this.myNick = if(!newNick.isEmpty){newNick} else {this.myNick}
+      val newDescription = readLine("Description of the bot: ")
+      this.ircBotDescription = if(!newDescription.isEmpty){newDescription} else {this.ircBotDescription}
       println("Homechannel set to " + this.homeChannel)
       println("Nick set to " + this.myNick)
       println("Bot description: " + ircBotDescription)
@@ -203,18 +206,17 @@ Beep boop."""
           this.findCommand(lineString) match {
             case "!keelover" =>
               this.shutDown(out); return
-            case "!join" => this.joinChannel(lineString, out, "line")
-            case "!cleanse" => this.cleanReputation(nick)
-            case "!relay" => this.relay(out, lineString)
-            case "!status" => this.status
-            case "!maintenance" => this.maintenanceTest(line, out)
-            case "!printlines" => this.messagePrintToggle
-            case "!birthday" => this.birthday(out, in, lineString)
-            case "!part" => this.part(out, lineString, receivedFrom)
-            case "!addtutorial" => this.addTutorialModeChannel(lineString, receivedFrom, out)
-            case "!removetutorial" => this.removeTutorialModeChannel(lineString, receivedFrom, out)
-            case "!testmaintenance" => this.testMaintenance
-            case _ => this.placeLine(line, receivedFrom, out)
+            case "!join"            => this.joinChannel(lineString, out, "line")
+            case "!cleanse"         => this.cleanReputation(nick)
+            case "!relay"           => this.relay(out, lineString)
+            case "!status"          => this.status
+            case "!maintenance"     => this.maintenanceTest(line, out)
+            case "!printlines"      => this.messagePrintToggle
+            case "!birthday"        => this.birthday(out, in, lineString)
+            case "!part"            => this.part(out, lineString, receivedFrom)
+            case "!addtutorial"     => this.addTutorialModeChannel(lineString, receivedFrom, out)
+            case "!removetutorial"  => this.removeTutorialModeChannel(lineString, receivedFrom, out)
+            case _                  => this.placeLine(line, receivedFrom, out)
 
           }
           // perform maintenance if more than 24h since last maintenance
@@ -226,10 +228,6 @@ Beep boop."""
     }
   }
   
-  def testMaintenance = {
-    val temp = this.lastCheck
-    this.lastCheck = System.currentTimeMillis()-86400001
-  }
   /**
    * Tests the maintenance method. Used for debugging.
    *

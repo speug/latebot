@@ -57,18 +57,18 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
           this.takeLine(line, nick)
         }
         command match {
-          case "!answer" => this.eightBall(out, receivedFrom)
-          case "!dice" => this.dice(lineString, out, receivedFrom)
-          case "!help" => this.scroller(out, nick, helpMessage)
-          case "!terminate" => this.terminate(out, nick)
+          case "!answer"       => this.eightBall(out, receivedFrom)
+          case "!dice"         => this.dice(lineString, out, receivedFrom)
+          case "!help"         => this.scroller(out, nick, helpMessage)
+          case "!terminate"    => this.terminate(out, nick)
           case "!bigredButton" => this.bigRedButton(out, nick)
-          case "!relay" => this.relay(out, lineString)
-          case "!opme" => this.opme(out, nick)
-          case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
-          case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
-          case "!stats" => this.stats(out)
-          case "!quote" => this.quote(out, lineString)
-          case _ =>
+          case "!relay"        => this.relay(out, lineString)
+          case "!opme"         => this.opme(out, nick)
+          case "!planned"      => this.plannedFeatures(out, lineString, receivedFrom, nick)
+          case "!changelog"    => this.fileReader(out, receivedFrom, "changeLog.txt")
+          case "!stats"        => this.stats(out)
+          case "!quote"        => this.quote(out, lineString)
+          case _               =>
         }
       } else if (this.savingQuote) {
         this.confirmQuote(this.quoteToConfirm)
