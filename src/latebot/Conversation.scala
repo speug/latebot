@@ -16,7 +16,8 @@ abstract class Conversation(val recipient: String, val incoming: Queue[(Long, St
   private var quoteToConfirm = ""
 
   val helpMessage =
-    """LATEBOT v0.6(updated / ;_; n-neutered) -Quotable-
+    """LATEBOT v1.0(Release party?) -Quotable-
+Lähdekoodi: https://bitbucket.org/Speug/latebot
  
 Tämänhetkiset ominaisuudet
 !answer:          Antaa kvanttikenttäfluktuaattorista oikean vastauksen kyllä/ei kysymykseen
@@ -24,13 +25,23 @@ Tämänhetkiset ominaisuudet
 !planned          Tulostaa suunnittellut ominaisuudet.
 !changelog        Tulostaa viimeaikaiset muutokset.
 !bigredbutton     Elä kajoa.
-!terminate        Aktivoi Skynet-vastaprotokolla. Käynnistä terminaattorimoodi.
+!terminate        Terminoi.
 !stats            Kertoo kivasti tietoja. Käytä miel. queryssä.
 !quote            Lukee lainauksen aikamme sankareilta
 !quote "<quote>" -<author>: lisää lainauksen tietokantaan
-!quote N#        lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
+!quote N#         lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
+!irchelp          lähettää irc-apuviestin
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
+  
+  /**
+   * Returns the command word in a given string.
+   *
+   * @param line a string possibly containing a keyword, marked with a '!'
+   * @tparam line String
+   *
+   * @returns a command word, if such exists; otherwise an empty string.
+   */
 
   def findCommand(line: String) = {
     line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
@@ -55,20 +66,20 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
           this.takeLine(line, nick)
         }
         command match {
-          case "!answer" => this.eightBall(out, receivedFrom)
-          case "!dice" => this.dice(lineString, out, receivedFrom)
-          case "!help" => this.scroller(out, nick, helpMessage)
-          case "!terminate" => this.terminate(out, nick)
+          case "!answer"       => this.eightBall(out, receivedFrom)
+          case "!dice"         => this.dice(lineString, out, receivedFrom)
+          case "!help"         => this.scroller(out, nick, helpMessage)
+          case "!terminate"    => this.terminate(out, nick)
           case "!bigredButton" => this.bigRedButton(out, nick)
-          case "!relay" => this.relay(out, lineString)
-          case "!opme" => this.opme(out, nick)
-          case "!planned" => this.plannedFeatures(out, lineString, receivedFrom, nick)
-          case "!changelog" => this.fileReader(out, receivedFrom, "changeLog.txt")
-          case "!stats" => this.stats(out)
-          case "!quote" => this.quote(out, lineString)
-          case _ =>
+          case "!relay"        => this.relay(out, lineString)
+          case "!opme"         => this.opme(out, nick)
+          case "!planned"      => this.plannedFeatures(out, lineString, receivedFrom, nick)
+          case "!changelog"    => this.fileReader(out, receivedFrom, "changeLog.txt")
+          case "!stats"        => this.stats(out)
+          case "!quote"        => this.quote(out, lineString)
+          case _               =>
         }
-      } else if(this.savingQuote){
+      } else if (this.savingQuote) {
         this.confirmQuote(this.quoteToConfirm)
         this.quoteToConfirm = ""
         this.savingQuote = false
@@ -176,23 +187,31 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def fileReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
-    var lines = Vector[String]()
-    this.bot.synchronized {
-      val file = Source.fromFile(filename)
-      lines = file.getLines.toVector
-      file.close()
+    try {
+      var lines = Vector[String]()
+      this.bot.synchronized {
+        val file = Source.fromFile(filename)
+        lines = file.getLines.toVector
+        file.close()
+      }
+      lines.foreach(sendMessage(out, _, receivedFrom))
+    } catch {
+      case nofile: FileNotFoundException => this.sendMessage(out, "Did not find file: " + filename, receivedFrom)
     }
-    lines.foreach(sendMessage(out, _, receivedFrom))
   }
 
   def randomReader(out: BufferedWriter, receivedFrom: String, filename: String): Unit = {
-    var lines = Vector[String]()
-    this.bot.synchronized {
-      val file = Source.fromFile(filename)
-      lines = file.getLines.toVector
-      file.close()
+    try {
+      var lines = Vector[String]()
+      this.bot.synchronized {
+        val file = Source.fromFile(filename)
+        lines = file.getLines.toVector
+        file.close()
+      }
+      this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
+    } catch {
+      case nofile: FileNotFoundException => this.sendMessage(out, "Did not find file: " + filename, receivedFrom)
     }
-    this.sendMessage(out, lines(Random.nextInt(lines.size)), receivedFrom)
   }
 
   def isChannel = {
@@ -216,10 +235,10 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     this.sendMessage(out, "Time since last scheduled maintenance: " + this.bot.convertTime(System.currentTimeMillis() - this.bot.lastCheck), this.recipient)
     this.sendMessage(out, "Running conversations at" + this.bot.conversations.keys.map(_.recipient).toVector.mkString(" ", ", ", "."), this.recipient)
     this.sendMessage(out, "Running a total of " + this.bot.conversations.keys.size + " threads", this.recipient)
-    if (!this.bot.blackList.keys.isEmpty) {
-      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
-    }
-    this.sendMessage(out, "All systems nominal", this.recipient)
+    /*    if (!this.bot.blackList.keys.isEmpty) {
+*      this.sendMessage(out, "Known troublemakers:" + this.bot.blackList.keys.map(_.nick).toVector.mkString(" ", ", ", "."), this.recipient)
+*   }
+*/ this.sendMessage(out, "All systems nominal", this.recipient)
   }
 
   def kill = {
@@ -262,8 +281,8 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     } else {
       val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
       targetQuery.synchronized {
-      targetQuery.addQuoteToConfirm(quote)
-      targetQuery.notify()
+        targetQuery.addQuoteToConfirm(quote)
+        targetQuery.notify()
       }
     }
   }
@@ -285,8 +304,8 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
       } else {
         val targetQuery = this.bot.conversations.keys.find(_.recipient == nick).get
         targetQuery.synchronized {
-        targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
-        targetQuery.notify()
+          targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
+          targetQuery.notify()
         }
       }
     }
@@ -306,7 +325,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     file.close()
     lines.find(_ == quote).isDefined
   }
-  
+
   def addQuoteToConfirm(quote: String) = {
     this.quoteToConfirm = quote
     this.savingQuote = true
