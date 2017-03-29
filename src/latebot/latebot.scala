@@ -220,7 +220,7 @@ Beep boop."""
 
           }
           // perform maintenance if more than 24h since last maintenance
-          if (line._1 > this.lastCheck + 86400000) {
+          if (line._1 > this.lastCheck + 1) {
             this.maintenance(line, out)
           }
         }
