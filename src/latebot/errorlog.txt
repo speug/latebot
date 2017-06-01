@@ -1,0 +1,15 @@
+:speug!seppall1@kosh.org.aalto.fi PRIVMSG #latebottest :asd
+:speug!seppall1@kosh.org.aalto.fi PRIVMSG #latebottest :asd
+:speug!seppall1@kosh.org.aalto.fi PRIVMSG #latebottest :asd
+:speug!seppall1@kosh.org.aalto.fi PRIVMSG #latebottest :asd
+Exception in thread "Thread-0" java.lang.IndexOutOfBoundsException: 0
+	at scala.collection.mutable.LinkedListLike$class.atLocation(LinkedListLike.scala:153)
+	at scala.collection.mutable.LinkedListLike$class.apply(LinkedListLike.scala:156)
+	at scala.collection.mutable.LinkedList.apply(LinkedList.scala:80)
+	at scala.collection.mutable.MutableList.apply(MutableList.scala:84)
+	at latebot.Chatter.hostmask(Chatter.scala:24)
+	at latebot.Channel.kickSpammer(Channel.scala:49)
+	at latebot.Channel.spam(Channel.scala:35)
+	at latebot.Channel.takeLine(Channel.scala:23)
+	at latebot.Conversation.run(Conversation.scala:43)
+	at java.lang.Thread.run(Unknown Source)
