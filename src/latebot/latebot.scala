@@ -360,12 +360,16 @@ Beep boop."""
    */
 
   def address(line: String): String = {
-    var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
-    if (recipent(0) == '#') {
-      recipent
+    if(line.contains("irc.cs.hut.fi"){
+    "Server"
     } else {
-      recipent = line.split(":")(1).split("!")(0)
-      recipent
+      var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
+      if (recipent(0) == '#' || recipent(0) == '!') {
+        recipent
+      } else {
+        recipent = line.split(":")(1).split("!")(0)
+        recipent
+      }
     }
   }
   /**
