@@ -215,7 +215,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def isChannel = {
-    this.recipient(0) == '#'
+    (this.recipient(0) == '#') || (this.recipient(0) == '!')
   }
 
   def addToHistory(line: (Long, String)) = {

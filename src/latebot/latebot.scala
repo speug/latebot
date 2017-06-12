@@ -220,7 +220,7 @@ Beep boop."""
 
           }
           // perform maintenance if more than 24h since last maintenance
-          if (line._1 > this.lastCheck + 1) {
+          if (line._1 > this.lastCheck + 10000) {
             this.maintenance(line, out)
           }
         }
@@ -273,33 +273,27 @@ Beep boop."""
     val sender = this.address(line._2)
     // attempts to join homechannel (just in case that has been kicked)
     println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
+    println("Maintenance trigger message: " + line._2)
     this.lastCheck = line._1
     println("Joining " + this.homeChannel)
     this.sendData(out, "JOIN " + this.homeChannel)
     //kill inactive querys
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
+    if(!querys.isEmpty){
+    println("Going into query removal")
+    querys.foreach(print(_))
     val removedQuerys = Buffer[Conversation]()
-    for (query <- querys) {
-      if (line._1 - query.lastMessage._1 < 86400000 && this.address(line._2) != query.recipient && query.recipient != sender) {
+    for(query <- querys) {
+      if(query.recipient != sender) {
         this.conversations -= query
         removedQuerys += query
         query.kill
       }
-      if (!removedQuerys.isEmpty) {
+      if(!removedQuerys.isEmpty) {
         println("Removed querys with " + removedQuerys.map(_.recipient).mkString(" ", ", ", "."))
       }
     }
-    //forgive spam
-    val forgivenSpammers = Buffer[Chatter]()
-    for (spammer <- this.blackList.keys.toVector) {
-      if (this.blackList(spammer) < 3) {
-        this.blackList -= spammer
-        forgivenSpammers += spammer
-        //remove ban if banned and more than 24 hours have elapsed
-      } else if (this.blackList(spammer) == 3 && line._1 - this.banList(spammer)._1 >= 86400000) {
-        this.unBan(spammer, this.banList(spammer)._2, out)
-      }
-    }
+  }
   }
 
   /**
@@ -360,7 +354,7 @@ Beep boop."""
    */
 
   def address(line: String): String = {
-    if(line.contains("irc.cs.hut.fi"){
+    if(line.contains("irc.cs.hut.fi")){
     "Server"
     } else {
       var recipent = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
