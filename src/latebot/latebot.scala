@@ -41,7 +41,7 @@ class latebot {
   val currentVersion = "1.0"
 
   val hello = """LATEBOT v1.0(Release build) -Quotable-
-Source at https://bitbucket.org/Speug/latebot
+Source at https://github.com/speug/latebot
 Some things might be broken still
 Beep boop."""
 
@@ -270,6 +270,7 @@ Beep boop."""
    */
 
   def maintenance(line: (Long, String), out: BufferedWriter) = {
+    val sender = this.address(line._2)
     // attempts to join homechannel (just in case that has been kicked)
     println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
     this.lastCheck = line._1
@@ -279,7 +280,7 @@ Beep boop."""
     val querys = this.conversations.keys.toVector.filter(!_.isChannel)
     val removedQuerys = Buffer[Conversation]()
     for (query <- querys) {
-      if (line._1 - query.lastMessage._1 < 86400000 && this.address(line._2) != query.recipient) {
+      if (line._1 - query.lastMessage._1 < 86400000 && this.address(line._2) != query.recipient && query.recipient != sender) {
         this.conversations -= query
         removedQuerys += query
         query.kill
