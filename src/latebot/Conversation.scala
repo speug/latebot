@@ -158,7 +158,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def terminate(out: BufferedWriter, nick: String) = {
-    sendData(out, "MODE " + nick + " -o")
+    sendData(out, "MODE " + this.homeChannel + " -o " + nick)
     sendMessage(out, "Nick " + nick + ", prepate to be terminated.", this.homeChannel)
     sendMessage(out, "Terminating in 3...", this.homeChannel)
     Thread.sleep(1000)
@@ -175,7 +175,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def opme(out: BufferedWriter, nick: String) = {
-    sendData(out, "MODE " + this.homeChannel + " " + nick + " +o")
+    sendData(out, "MODE " + this.homeChannel + " +o " + nick)
   }
 
   def plannedFeatures(out: BufferedWriter, line: String, receivedFrom: String, nick: String) = {
