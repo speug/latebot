@@ -285,7 +285,7 @@ Beep boop."""
     querys.foreach(print(_))
     val removedQuerys = Buffer[Conversation]()
     for(query <- querys) {
-      if(query.recipient != sender) {
+      if(query.recipient != sender && line._1 - query.lastMessage._1 < 86400000) {
         this.conversations -= query
         removedQuerys += query
         query.kill
