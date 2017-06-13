@@ -48,7 +48,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   }
 
   def run(): Unit = {
-    while (!this.stop && !this.incoming.isEmpty) {
+    while (!this.stop) {
       if (!this.incoming.isEmpty && !this.savingQuote) {
         val line = this.incoming.dequeue()
         val lineString = line._2
