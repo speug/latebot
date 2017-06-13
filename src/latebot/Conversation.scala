@@ -110,7 +110,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
 
   def address(line: String): String = {
     var recipient = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
-    if (recipient(0) == '#') {
+    if (recipient(0) == '#' || recipient(0) == '!') {
       recipient
     } else {
       recipient = line.split(":")(1).split("!")(0)
