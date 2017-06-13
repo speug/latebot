@@ -193,15 +193,7 @@ Beep boop."""
           if (lineString.contains("PRIVMSG")) {
             nick = dataSplit(1).split("!")(0)
             receivedFrom = this.address(lineString)
-          }
-          // party about receiving operator status (@)
-          if (lineString.contains("+o") && lineString.contains(this.myNick)) {
-            val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
-            if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
-          }
-          if (lineString.contains("JOIN")) {
-            this.helpNewUser(lineString, out)
-          }
+			
           // react to command words or transfer line to a conversation
           this.findCommand(lineString) match {
             case "!keelover" =>
@@ -220,8 +212,17 @@ Beep boop."""
 
           }
           // perform maintenance if more than 24h since last maintenance
-          if (line._1 > this.lastCheck + 10000) {
+          if (line._1 > this.lastCheck + 86400000) {
             this.maintenance(line, out)
+          }
+          }
+          // party about receiving operator status (@)
+          if (lineString.contains("+o " + this.myNick)) {
+            val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
+            if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
+          }
+          if (lineString.contains("JOIN")) {
+            this.helpNewUser(lineString, out)
           }
         }
       }
