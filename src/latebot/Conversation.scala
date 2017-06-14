@@ -77,6 +77,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
           case "!changelog"    => this.fileReader(out, receivedFrom, "changeLog.txt")
           case "!stats"        => this.stats(out)
           case "!quote"        => this.quote(out, lineString)
+	  case "!weather"      => this.weather(out,receivedFrom)
           case _               =>
         }
       } else if (this.savingQuote) {
@@ -334,5 +335,10 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   def takeLine(line: (Long, String), nick: String): Unit
 
   def confirmQuote(quote: String): Unit
-
+  
+  def weather(out: BufferedWriter,receivedFrom: String) {
+    val raw = Source.fromURL("http://outside.aalto.fi/current.txt").mkString
+    val output = raw.split(": ").lift(1).getOrElse("Could not fetch weather data")
+    this.sendMessage(out,output,receivedFrom)
+  }
 }
