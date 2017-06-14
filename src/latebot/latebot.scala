@@ -40,9 +40,9 @@ class latebot {
   private var printMessagesToConsole = true
   val currentVersion = "1.0"
 
-  val hello = """LATEBOT v1.1(Release build) -Quotable-
+  val hello = """LATEBOT v1.2(Release build) -Quotable-
 Source at https://github.com/speug/latebot
-More quotes! Terminator mode!
+More quotes! Terminator mode! Weather!
 Beep boop."""
 
   /**

@@ -31,6 +31,7 @@ Tämänhetkiset ominaisuudet
 !quote "<quote>" -<author>: lisää lainauksen tietokantaan
 !quote N#         lisää # viestiä sitten olleen viestin tietokantaan. Viimeisin viesti komennolla N1.
 !irchelp          lähettää irc-apuviestin
+!weather          Tulostaa viimeisimmän Otaniemen säätiedon
  
 Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug."""
   
