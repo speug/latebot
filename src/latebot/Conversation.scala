@@ -338,7 +338,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   
   def weather(out: BufferedWriter,receivedFrom: String) {
     val raw = Source.fromURL("http://outside.aalto.fi/current.txt").mkString
-    val output = raw.split(": ").lift(1).getOrElse("Could not fetch weather data")
+    val output = "Current weather in Otaniemi: " + raw.split(": ").lift(1).getOrElse("Could not fetch weather data")
     this.sendMessage(out,output,receivedFrom)
   }
 }
