@@ -197,7 +197,7 @@ Beep boop."""
           // react to command words or transfer line to a conversation
           this.findCommand(lineString) match {
             case "!keelover" =>
-              this.shutDown(out); return
+              this.shutDown(out,"Shutting down."); return
             case "!join"            => this.joinChannel(lineString, out, "line")
             case "!cleanse"         => this.cleanReputation(nick)
             case "!relay"           => this.relay(out, lineString)
@@ -208,6 +208,7 @@ Beep boop."""
             case "!part"            => this.part(out, lineString, receivedFrom)
             case "!addtutorial"     => this.addTutorialModeChannel(lineString, receivedFrom, out)
             case "!removetutorial"  => this.removeTutorialModeChannel(lineString, receivedFrom, out)
+	    case "!update"          => this.shutDown(out,"Updating."); return
             case _                  => this.placeLine(line, receivedFrom, out)
 
           }
@@ -248,8 +249,8 @@ Beep boop."""
    * @param out the output writer
    * @tparam out BufferedWriter
    */
-  def shutDown(out: BufferedWriter) = {
-    this.shutDownBroadcast(out)
+  def shutDown(out: BufferedWriter, prtMsg: String) = {
+    this.shutDownBroadcast(out, prtMsg)
     this.conversations.keys.foreach(_.kill)
     for (conversation <- this.conversations.keys) {
       conversation.synchronized {
@@ -303,8 +304,8 @@ Beep boop."""
    * @param out an output writer
    * @tparam out BufferedWriter
    */
-  def shutDownBroadcast(out: BufferedWriter) = {
-    this.conversations.keys.toVector.filter(_.isChannel).foreach((c: Conversation) => c.sendData(out, "PART " + c.recipient + " :You may have killed me, but the idea lives on!"))
+  def shutDownBroadcast(out: BufferedWriter, prtMsg: String) = {
+    this.conversations.keys.toVector.filter(_.isChannel).foreach((c: Conversation) => c.sendData(out, "PART " + c.recipient + " :" + prtMsg))
   }
 
   /**
