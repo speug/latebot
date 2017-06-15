@@ -7,18 +7,18 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWriter, homeChannel: String, bot: latebot, historySize: Int, messageHistory: Queue[(Long, String)]) extends Conversation(recipient, incoming, out, homeChannel, bot, historySize, messageHistory)  {
-  
+class Query(recipient: String, incoming: Queue[Message], out: BufferedWriter, homeChannel: String, bot: latebot, historySize: Int, messageHistory: Queue[Message]) extends Conversation(recipient, incoming, out, homeChannel, bot, historySize, messageHistory)  {
+
   private val chatter = new Chatter(recipient, this)
 
-  def takeLine(line:(Long,String), nick: String) = {
-    this.addToHistory(line)
+  def takeLine(msg: Message) = {
+    this.addToHistory(msg)
       if(this.isSpammed(line._1)){
         this.bot.addToBlackList(this.chatter)
         this.spam(this.chatter, out)
       }
   }
-  
+
   def isSpammed(line: (Long)) = {
     val times = Buffer[Long]()
     for (i <- 1 until this.messageHistory.size) {
@@ -27,20 +27,20 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     times += line - this.messageHistory(this.messageHistory.size - 1)._1
     times.filter(_ <= 3000).size > 7
   }
-  
+
   def spam(spammer: Chatter, out: BufferedWriter) = {
     this.bot.blackList(spammer) match{
-//      case 0 => 
+//      case 0 =>
 //      case 1 => this.warn(spammer, out)
 //      case 2 => this.warn(spammer, out)
 //      case 3 => this.sleep()
 		case _ =>
     }
-    
+
   }
-  
+
   // tää kaikki on paskaa
-  
+
   def warn(spammer: Chatter, out: BufferedWriter) = {
     /*
     this.messageHistory.clear()
@@ -52,14 +52,14 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
     */
     this.sendMessage(out, "Query spam from " + spammer.nick, "speug")
   }
-  
-  
+
+
   // WHAT WERE YOU THINKING?!?!?!?!?!?!? what does it even doooooooooooooooooo
   def sleep() = {
     Thread.sleep(86400000)
     this.bot.blackList -= chatter
   }
-  
+
   def confirmQuote(quoteToConfirm: String) = {
     this.sendMessage(out, "Do you wish to add the following quote?", this.recipient)
     this.sendMessage(out, quoteToConfirm, this.recipient)
@@ -69,8 +69,8 @@ class Query(recipient: String, incoming: Queue[(Long, String)], out: BufferedWri
       //println("No messages yet.")
       this.wait()
       }
-    } 
-    if(this.incoming.dequeue._2.split(":").last.trim().equalsIgnoreCase("y")){
+    }
+    if(this.incoming.dequeue.raw.split(":").last.trim().equalsIgnoreCase("y")){
       this.bot.writeToFile("quotes.txt", quoteToConfirm)
       this.sendMessage(out, "The quote has been saved.", this.recipient)
     } else {

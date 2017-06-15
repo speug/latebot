@@ -271,7 +271,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     if (messageNumber == "-1" || !this.stringToInt(messageNumber).isDefined || this.stringToInt(messageNumber).get > this.historySize) {
       this.sendMessage(out, "Syntax error: could not find the message.", msg.address)
     } else {
-      val quoteString = this.messageHistory(this.messageHistory.size - 1 - messageNumber.toInt)._2
+      val quoteString = this.messageHistory(this.messageHistory.size - 1 - messageNumber.toInt).raw
       val quote = quoteString.split(":").last
       val author = quoteString.split(":")(1).split("!")(0)
       if (this.alreadyQuoted("\"" + quote + "\"" + " -" + author)) {
