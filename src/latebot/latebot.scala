@@ -167,13 +167,13 @@ Beep boop."""
       val msg = new Message(in.readLine())
       if (msg.raw != null) {
         // print the incoming lines to console only if they are not pings and the printMessagesToConsole flag is set to true
-        if (msg.type == "PING" && this.printMessagesToConsole) { println(msg.time + ": " + msg.raw) }
+        if (msg.msgType != "PING" && this.printMessagesToConsole) { println(msg.mkString) }
         // if bot is pinged by server, it must pong
-        if (msg.type == "PING") {
+        if (msg.msgType == "PING") {
           pong(out, msg)
-        } else if(msg.type == "PRIVMSG"){
+        } else if(msg.msgType == "PRIVMSG"){
           // react to command words or transfer line to a conversation
-          msg.commang match {
+          msg.command match {
             case Some("!keelover") =>
               this.shutDown(out,"Shutting down."); return
             case Some("!join")            => this.joinChannel(msg, out, "line")
@@ -200,7 +200,7 @@ Beep boop."""
             val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
             if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), msg.raw.split("MODE ")(1).takeWhile(_ != ' ')) }
           }
-          if (msg.type == "JOIN") {
+          if (msg.msgType == "JOIN") {
             this.helpNewUser(msg, out)
           }
         }
@@ -295,7 +295,7 @@ Beep boop."""
    * @param out the output to server writer
    * @tparam out BufferedWriter
    */
-  def placeLine(msg, out: BufferedWriter) = {
+  def placeLine(msg: Message, out: BufferedWriter) = {
     if (msg.address.lift(0).isDefined) {
       if (!this.conversations.find(_._1.recipient == msg.address).isDefined) {
         val newConversation = this.addConversation(msg.address, out)
@@ -320,8 +320,8 @@ Beep boop."""
    * @tparam dataSplit String
    */
   def pong(out: BufferedWriter, msg: Message) {
-    if (msg.dataSplit.substring(0, 4).equalsIgnoreCase("ping")) {
-      val pongmsg = "pong " + dataSplit.substring(5)
+    if (msg.raw.substring(0, 4).equalsIgnoreCase("ping")) {
+      val pongmsg = "pong " + msg.raw.substring(5)
       sendData(out, pongmsg)
     }
   }
@@ -368,7 +368,7 @@ Beep boop."""
    * @tparams line String
    */
   def relay(out: BufferedWriter, msg: Message) = {
-    this.sendData(out, msg.raw.split("!relay ").lift(1).getOrElse(''))
+    this.sendData(out, msg.raw.split("!relay ").lift(1).getOrElse(""))
   }
   /**
    * Main method for object for launching the bot.
@@ -457,7 +457,7 @@ Beep boop."""
    */
 
   def joinChannel(msg: Message, out: BufferedWriter, input: String) = {
-    val channel = if (input == "line") { msg.raw.split("!join ")(1) } else { line }
+    val channel = msg.raw.split("!join ")(1)
     val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
     new Thread(newConversation).start()

@@ -9,24 +9,24 @@ import scala.collection.mutable.Queue
 
 class Chatter(val nick: String, val conversation: Conversation) {
 
-  private val messageHistory = new Queue[(Long, String)]()
+  private val messageHistory = new Queue[Message]()
 
-  def takeLine(line: (Long, String)): Unit = {
+  def takeLine(msg: Message): Unit = {
     if (this.messageHistory.size <= 10) {
-      this.messageHistory += line
+      this.messageHistory += msg
     } else {
       val toRemove = this.messageHistory.dequeue()
-      this.messageHistory += line
+      this.messageHistory += msg
     }
   }
-  
+
   def hostmask = {
-    this.messageHistory(0)._2.dropWhile(_ != '!').takeWhile(_ != ' ')
+    this.messageHistory(0).raw.dropWhile(_ != '!').takeWhile(_ != ' ')
   }
 
-  def isSpam(line: (Long, String)) = {
+  def isSpam(msg: Message) = {
     if(this.conversation.isChannel){
-    (this.isTooFrequent(line._1) || (this.messageHistory.filter((historyLine: (Long, String)) => historyLine._2 == line._2 && !historyLine._2.split(":").contains('!')).size >= 5))
+    (this.isTooFrequent(msg.ms) || (this.messageHistory.filter((historyMsg: Message) => historyMsg.raw == msg.raw && !historyMsg.raw.split(":").contains('!')).size >= 5))
     } else {
       false
     }
@@ -35,12 +35,12 @@ class Chatter(val nick: String, val conversation: Conversation) {
   def isTooFrequent(line: (Long)) = {
     val times = Buffer[Long]()
     for (i <- 1 until this.messageHistory.size) {
-      times += this.messageHistory(i)._1 - this.messageHistory(i - 1)._1
+      times += this.messageHistory(i).ms - this.messageHistory(i - 1).ms
     }
-    times += line - this.messageHistory(this.messageHistory.size - 1)._1
+    times += line - this.messageHistory(this.messageHistory.size - 1).ms
     times.filter(_ <= 3000).size > 5
   }
-  
+
   def flushQueue() = {
     this.messageHistory.clear()
   }

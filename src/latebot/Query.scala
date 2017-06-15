@@ -13,7 +13,7 @@ class Query(recipient: String, incoming: Queue[Message], out: BufferedWriter, ho
 
   def takeLine(msg: Message) = {
     this.addToHistory(msg)
-      if(this.isSpammed(line._1)){
+      if(this.isSpammed(msg.ms)){
         this.bot.addToBlackList(this.chatter)
         this.spam(this.chatter, out)
       }
@@ -22,9 +22,9 @@ class Query(recipient: String, incoming: Queue[Message], out: BufferedWriter, ho
   def isSpammed(line: (Long)) = {
     val times = Buffer[Long]()
     for (i <- 1 until this.messageHistory.size) {
-      times += this.messageHistory(i)._1 - this.messageHistory(i - 1)._1
+      times += this.messageHistory(i).ms - this.messageHistory(i - 1).ms
     }
-    times += line - this.messageHistory(this.messageHistory.size - 1)._1
+    times += line - this.messageHistory(this.messageHistory.size - 1).ms
     times.filter(_ <= 3000).size > 7
   }
 

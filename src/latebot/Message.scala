@@ -3,38 +3,41 @@ package latebot
 import java.util.Calendar
 import java.text.SimpleDateFormat
 
-class Message(raw: String) {
+class Message(s: String) {
 
+  val raw = s
   val ms = System.currentTimeMillis()
   private val created = Calendar.getInstance().getTime()
   private val timeFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss")
 
   val time = timeFormat.format(created)
 
-  val type: String = raw.split(' ')(1)
+  val msgType: String = if(raw(0)==':'){ raw.split(' ')(1) } else { raw.split(' ')(0) }
 
   val address: String = {
     if(raw.contains("irc.cs.hut.fi")){
     "Server"
-    } else {
+  } else if(this.msgType == "PRIVMSG") {
       var recipent = raw.split("PRIVMSG ")(1).takeWhile(_ != ' ')
       if (recipent(0) == '#' || recipent(0) == '!') {
         recipent
       } else {
-        recipent = line.split(":")(1).split("!")(0)
+        recipent = raw.split(":")(1).split("!")(0)
         recipent
       }
+    } else {
+      "none"
     }
   }
 
   val dataSplit = raw.split(':')
 
-  val nick: Some(String) = {
-    if(this.type == "PRIVMSG"){
-      Some(this.dataSplit(1).split("!")(0))
-    } else {
-      None
+  val nick: Option[String] = {
+    var out: Option[String] = None
+    if(this.msgType == "PRIVMSG"){
+      out = Some(this.dataSplit(1).split("!")(0))
     }
+    out
   }
 
   /**
@@ -44,9 +47,9 @@ class Message(raw: String) {
    */
 
   val command = {
-      if(this.type == "PRIVMSG"){
-        val potential = line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
-        if(potential(0) == '!'){
+      if(this.msgType == "PRIVMSG"){
+        val potential = raw.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
+        if(potential.lift(0).isDefined && potential(0) == '!'){
           Some(potential)
         } else {
           None

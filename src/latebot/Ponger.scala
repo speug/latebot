@@ -1,3 +1,5 @@
+/*
+
 package latebot
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }
@@ -8,3 +10,4 @@ class Ponger(main: ActorRef) extends Actor {
     case Message => main ! this.pong()
   }
 }
+*/

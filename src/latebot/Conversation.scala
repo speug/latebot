@@ -40,7 +40,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
       if (!this.incoming.isEmpty && !this.savingQuote) {
         val msg = this.incoming.dequeue()
         val command = msg.command
-        if (msg.type == "PRIVMSG") {
+        if (msg.msgType == "PRIVMSG") {
           this.takeLine(msg)
         }
         command match {
@@ -54,9 +54,9 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
           case Some("!planned")      => this.plannedFeatures(out, msg)
           case Some("!changelog")    => this.fileReader(out, msg.address, "changeLog.txt")
           case Some("!stats")        => this.stats(out)
-          case Some("!quote")        => this.quote(out, msg.raw)
-	        case Some("!weather")      => this.weather(out, msg.address)
-          case None                  =>
+          case Some("!quote")        => this.quote(out, msg)
+	        case Some("!weather")      => this.weather(out, msg)
+          case _                     =>
         }
       } else if (this.savingQuote) {
         this.confirmQuote(this.quoteToConfirm)
@@ -84,17 +84,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
   def sendMessage(out: BufferedWriter, message: String, receiver: String) = {
     val toBeSent = "PRIVMSG " + receiver + " :" + message
     sendData(out, toBeSent)
-    this.messageHistory += ((System.currentTimeMillis(), toBeSent))
-  }
-
-  def address(msg: Message): String = {
-    var recipient = line.split("PRIVMSG ")(1).takeWhile(_ != ' ')
-    if (recipient(0) == '#' || recipient(0) == '!') {
-      recipient
-    } else {
-      recipient = line.split(":")(1).split("!")(0)
-      recipient
-    }
+    this.messageHistory += new Message(toBeSent)
   }
 
   def dice(msg: Message, out: BufferedWriter) {
@@ -120,8 +110,8 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     }
   }
 
-  def scroller(out: BufferedWriter, address: String, textToScroll: String) = {
-    textToScroll.split("\n").foreach(sendMessage(out, _, address))
+  def scroller(out: BufferedWriter, msg: Message, textToScroll: String) = {
+    textToScroll.split("\n").foreach(sendMessage(out, _, msg.address))
   }
 
   def eightBall(out: BufferedWriter, address: String) = {
@@ -281,7 +271,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
         new Thread(newQuery).start()
         newQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
       } else {
-        val targetQuery = this.bot.conversations.keys.find(_.recipient == nick.get).get
+        val targetQuery = this.bot.conversations.keys.find(_.recipient == msg.nick.get).get
         targetQuery.synchronized {
           targetQuery.addQuoteToConfirm("\"" + quote + "\"" + " -" + author)
           targetQuery.notify()
@@ -310,7 +300,7 @@ Metodit testauksen alla, saa kokeilla. Ilmoita bugeista querylla nickille speug.
     this.savingQuote = true
   }
 
-  def takeLine(line: (Long, String), msg: Message): Unit
+  def takeLine(msg: Message): Unit
 
   def confirmQuote(quote: String): Unit
 
