@@ -187,7 +187,7 @@ Beep boop."""
             case Some("!addtutorial")     => this.addTutorialModeChannel(msg, out)
             case Some("!removetutorial")  => this.removeTutorialModeChannel(msg, out)
 	          case Some("!update")          => this.shutDown(out,"Updating."); return
-            case None                     => this.placeLine(msg, out)
+            case _                        => this.placeLine(msg, out)
 
           }
           // perform maintenance if more than 24h since last maintenance
