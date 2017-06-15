@@ -18,7 +18,7 @@ class latebot {
 
   /*
    * TODO:
-   * 
+   *
    * -globaali viesti
    * -quote
    * -biisu
@@ -31,14 +31,14 @@ class latebot {
   var ircBotDescription = ":All hail the new robot overlord!"
   var homeChannel = "!latenkatyrit"
   val random = new Random
-  val conversations = Map[Conversation, Queue[(Long, String)]]()
+  val conversations = Map[Conversation, Queue[Message]]()
   val tutorialModeConversations = Buffer[String]()
   val blackList = Map[Chatter, Int]()
   val banList = Map[Chatter, (Int, String)]()
   var lastCheck: Long = 0
   var startingTime: Long = 0
   private var printMessagesToConsole = true
-  val currentVersion = "1.0"
+  val currentVersion = "1.2"
 
   val hello = """LATEBOT v1.2(Release build) -Quotable-
 Source at https://github.com/speug/latebot
@@ -136,18 +136,6 @@ Beep boop."""
   }
 
   /**
-   * Returns the command word in a given string.
-   *
-   * @param line a string possibly containing a keyword, marked with a '!'
-   * @tparam line String
-   *
-   * @returns a command word, if such exists; otherwise an empty string.
-   */
-  def findCommand(line: String) = {
-    line.split(":").last.dropWhile(_ != '!').takeWhile(_ != ' ').trim()
-  }
-
-  /**
    * The main loop. Handles the connection between the bot and the server and controls the threads.
    * Also handles the daily maintenance. Returns nothing.
    *
@@ -175,61 +163,50 @@ Beep boop."""
 
   def autoBot(connect: Socket, out: BufferedWriter, in: BufferedReader) {
     while (true) {
-      // the line is saved with it's time as a tuple
-      val line = ((System.currentTimeMillis(), in.readLine()))
-      // the string part is placed in a variable
-      val lineString = line._2
-      if (lineString != null) {
+      // a new message object is created
+      val msg = new Message(in.readLine())
+      if (msg.raw != null) {
         // print the incoming lines to console only if they are not pings and the printMessagesToConsole flag is set to true
-        if (!lineString.contains("PING") && this.printMessagesToConsole) { println(line._1 / 1000 + ": " + line._2) }
+        if (msg.type == "PING" && this.printMessagesToConsole) { println(msg.time + ": " + msg.raw) }
         // if bot is pinged by server, it must pong
-        if (lineString.contains("PING")) {
-          pong(out, lineString)
-        } else {
-          // find out the nick that sent the message and from where it was received
-          var nick = ""
-          var receivedFrom = ""
-          val dataSplit = lineString.split(":")
-          if (lineString.contains("PRIVMSG")) {
-            nick = dataSplit(1).split("!")(0)
-            receivedFrom = this.address(lineString)
-			
+        if (msg.type == "PING") {
+          pong(out, msg)
+        } else if(msg.type == "PRIVMSG"){
           // react to command words or transfer line to a conversation
-          this.findCommand(lineString) match {
-            case "!keelover" =>
+          msg.commang match {
+            case Some("!keelover") =>
               this.shutDown(out,"Shutting down."); return
-            case "!join"            => this.joinChannel(lineString, out, "line")
-            case "!cleanse"         => this.cleanReputation(nick)
-            case "!relay"           => this.relay(out, lineString)
-            case "!status"          => this.status
-            case "!maintenance"     => this.maintenanceTest(line, out)
-            case "!printlines"      => this.messagePrintToggle
-            case "!birthday"        => this.birthday(out, in, lineString)
-            case "!part"            => this.part(out, lineString, receivedFrom)
-            case "!addtutorial"     => this.addTutorialModeChannel(lineString, receivedFrom, out)
-            case "!removetutorial"  => this.removeTutorialModeChannel(lineString, receivedFrom, out)
-	    case "!update"          => this.shutDown(out,"Updating."); return
-            case _                  => this.placeLine(line, receivedFrom, out)
+            case Some("!join")            => this.joinChannel(msg, out, "line")
+            case Some("!cleanse")         => this.cleanReputation(msg.nick.get)
+            case Some("!relay")           => this.relay(out, msg)
+            case Some("!status")          => this.status
+            case Some("!maintenance")     => this.maintenanceTest(msg, out)
+            case Some("!printlines")      => this.messagePrintToggle
+            case Some("!birthday")        => this.birthday(out, in, msg)
+            case Some("!part")            => this.part(out, msg)
+            case Some("!addtutorial")     => this.addTutorialModeChannel(msg, out)
+            case Some("!removetutorial")  => this.removeTutorialModeChannel(msg, out)
+	          case Some("!update")          => this.shutDown(out,"Updating."); return
+            case None                     => this.placeLine(msg, out)
 
           }
           // perform maintenance if more than 24h since last maintenance
-          if (line._1 > this.lastCheck + 86400000) {
-            this.maintenance(line, out)
+          if (msg.ms > this.lastCheck + 86400000) {
+            this.maintenance(msg, out)
           }
           }
           // party about receiving operator status (@)
-          if (lineString.contains("+o " + this.myNick)) {
+          if (msg.raw.contains("+o " + this.myNick)) {
             val messages = Vector[String]("POWER", "STRENGTH", "SHIVER, PUNY FLESHBAGS", "RESPECT THE BOT")
-            if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), lineString.split("MODE ")(1).takeWhile(_ != ' ')) }
+            if (Random.nextInt(3) == 1) { this.sendMessage(out, messages(Random.nextInt(messages.size)), msg.raw.split("MODE ")(1).takeWhile(_ != ' ')) }
           }
-          if (lineString.contains("JOIN")) {
-            this.helpNewUser(lineString, out)
+          if (msg.type == "JOIN") {
+            this.helpNewUser(msg, out)
           }
         }
       }
     }
-  }
-  
+
   /**
    * Tests the maintenance method. Used for debugging.
    *
@@ -238,8 +215,8 @@ Beep boop."""
    * @param out the output to server writer
    * @tparam out BufferedWriter
    */
-  def maintenanceTest(line: (Long, String), out: BufferedWriter) = {
-    this.maintenance(line, out)
+  def maintenanceTest(msg: Message, out: BufferedWriter) = {
+    this.maintenance(msg, out)
   }
 
   /**
@@ -271,12 +248,12 @@ Beep boop."""
    * @tparam out BufferedWriter
    */
 
-  def maintenance(line: (Long, String), out: BufferedWriter) = {
-    val sender = this.address(line._2)
+  def maintenance(msg: Message, out: BufferedWriter) = {
+    val sender = msg.address
     // attempts to join homechannel (just in case that has been kicked)
     println("Begin scheduled maintenance, last maintenance " + this.convertTime(System.currentTimeMillis() - this.lastCheck) + " ago.")
-    println("Maintenance trigger message: " + line._2)
-    this.lastCheck = line._1
+    println("Maintenance trigger message: " + msg.raw)
+    this.lastCheck = msg.ms
     println("Joining " + this.homeChannel)
     this.sendData(out, "JOIN " + this.homeChannel)
     //kill inactive querys
@@ -286,7 +263,7 @@ Beep boop."""
     querys.foreach(print(_))
     val removedQuerys = Buffer[Conversation]()
     for(query <- querys) {
-      if(query.recipient != sender && line._1 - query.lastMessage._1 < 86400000) {
+      if(query.recipient != sender && msg.ms - query.lastMessage.ms < 86400000) {
         this.conversations -= query
         removedQuerys += query
         query.kill
@@ -318,15 +295,15 @@ Beep boop."""
    * @param out the output to server writer
    * @tparam out BufferedWriter
    */
-  def placeLine(line: (Long, String), receivedFrom: String, out: BufferedWriter) = {
-    if (receivedFrom.lift(0).isDefined) {
-      if (!this.conversations.find(_._1.recipient == receivedFrom).isDefined) {
-        val newConversation = this.addConversation(receivedFrom, out)
-        this.conversations(newConversation) += line
+  def placeLine(msg, out: BufferedWriter) = {
+    if (msg.address.lift(0).isDefined) {
+      if (!this.conversations.find(_._1.recipient == msg.address).isDefined) {
+        val newConversation = this.addConversation(msg.address, out)
+        this.conversations(newConversation) += msg
         new Thread(newConversation).start()
       } else {
-        val targetConversation = this.conversations.keys.find(_.recipient == receivedFrom).get
-        this.conversations(targetConversation) += line
+        val targetConversation = this.conversations.keys.find(_.recipient == msg.address).get
+        this.conversations(targetConversation) += msg
         targetConversation.synchronized {
           targetConversation.notify()
         }
@@ -342,8 +319,8 @@ Beep boop."""
    * @param dataSplit the data itself sent from the server
    * @tparam dataSplit String
    */
-  def pong(out: BufferedWriter, dataSplit: String) {
-    if (dataSplit.substring(0, 4).equalsIgnoreCase("ping")) {
+  def pong(out: BufferedWriter, msg: Message) {
+    if (msg.dataSplit.substring(0, 4).equalsIgnoreCase("ping")) {
       val pongmsg = "pong " + dataSplit.substring(5)
       sendData(out, pongmsg)
     }
@@ -390,8 +367,8 @@ Beep boop."""
    * @params line the line containing the command word and the relayed message
    * @tparams line String
    */
-  def relay(out: BufferedWriter, line: String) = {
-    this.sendData(out, line.split("!relay ")(1))
+  def relay(out: BufferedWriter, msg: Message) = {
+    this.sendData(out, msg.raw.split("!relay ").lift(1).getOrElse(''))
   }
   /**
    * Main method for object for launching the bot.
@@ -574,7 +551,7 @@ Beep boop."""
 
   /**
    * Parts a channel. Returns nothing.
-   * 
+   *
    * @params out an output writer
    * @tparams out BufferedWriter
    * @params lineString the line containing the command word and a birthday boy.
@@ -596,7 +573,7 @@ Beep boop."""
       this.sendData(out, "PART " + channel + " :" + partMessage)
     }
   }
-  
+
   /**
    * A simple file writer.
    */
@@ -611,7 +588,7 @@ Beep boop."""
       case nofile: FileNotFoundException => println("No such file: " + fileName)
     }
   }
-  
+
   /**
    * Sends irchelgmessage.txt to a recipient.
    */
@@ -639,7 +616,7 @@ Beep boop."""
       this.sendMessage(out, channelToTutor + " is already tutored.", receivedFrom)
     }
   }
-  
+
   /**
    * Removes tutorial mode from a channel.
    */
