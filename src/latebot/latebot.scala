@@ -421,8 +421,8 @@ Beep boop."""
    */
 
   def addConversation(recipient: String, out: BufferedWriter) = {
-    val newIncomingQueue = Queue[(Long, String)]()
-    val newConversation = if (recipient(0) == '#') { new Channel(recipient, newIncomingQueue, out, this.homeChannel, this, 20, new Queue[(Long, String)]) } else { new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[(Long, String)]) }
+    val newIncomingQueue = Queue[Message]()
+    val newConversation = if (recipient(0) == '#') { new Channel(recipient, newIncomingQueue, out, this.homeChannel, this, 20, new Queue[Message]) } else { new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[Message]) }
     this.conversations += ((newConversation, newIncomingQueue))
     newConversation
   }
@@ -437,8 +437,8 @@ Beep boop."""
    * @returns the created Query
    */
   def addQuery(recipient: String, out: BufferedWriter) = {
-    val newIncomingQueue = Queue[(Long, String)]()
-    val newQuery = new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[(Long, String)])
+    val newIncomingQueue = Queue[Message]()
+    val newQuery = new Query(recipient, newIncomingQueue, out, this.homeChannel, this, 10, new Queue[Message])
     this.conversations += ((newQuery, newIncomingQueue))
     newQuery
   }
@@ -456,8 +456,8 @@ Beep boop."""
    * @tparams input String
    */
 
-  def joinChannel(line: String, out: BufferedWriter, input: String) = {
-    val channel = if (input == "line") { line.split("!join ")(1) } else { line }
+  def joinChannel(msg: Message, out: BufferedWriter, input: String) = {
+    val channel = if (input == "line") { msg.raw.split("!join ")(1) } else { line }
     val newConversation = this.addConversation(channel, out)
     this.sendData(out, "JOIN " + channel)
     new Thread(newConversation).start()
@@ -528,12 +528,12 @@ Beep boop."""
    * @tparams out BufferedWriter
    * @params in an input reader
    * @tparams in BufferedReader
-   * @params lineString the line containing the command word and a birthday boy.
-   * @tparams lineString String
+   * @params msg.raw the line containing the command word and a birthday boy.
+   * @tparams msg.raw String
    */
 
-  def birthday(out: BufferedWriter, in: BufferedReader, lineString: String) = {
-    val birthdayBoy = lineString.split("!birthday ").lift(1).getOrElse("empty")
+  def birthday(out: BufferedWriter, in: BufferedReader, msg: Message) = {
+    val birthdayBoy = msg.raw.split("!birthday ").lift(1).getOrElse("empty")
     if (birthdayBoy != "empty") {
       val line = in.readLine()
       if (line.contains(birthdayBoy)) {
@@ -554,21 +554,21 @@ Beep boop."""
    *
    * @params out an output writer
    * @tparams out BufferedWriter
-   * @params lineString the line containing the command word and a birthday boy.
-   * @tparams lineString String
+   * @params msg.raw the line containing the command word and a birthday boy.
+   * @tparams msg.raw String
    * @params nick the name of the channel
    * @tparams nick String
    */
 
-  def part(out: BufferedWriter, lineString: String, nick: String) = {
-    val params = lineString.split("!part ").lift(1)
+  def part(out: BufferedWriter, msg: Message) = {
+    val params = msg.raw.split("!part ").lift(1)
     val channel = params.getOrElse("empty").takeWhile(_ != ' ')
     var partMessage = params.getOrElse("empty").dropWhile(_ != ' ')
     if (partMessage.isEmpty) {
       partMessage = "You live another day, meatbags!"
     }
     if (this.conversations.keys.find(_.recipient == channel).isEmpty) {
-      this.sendMessage(out, "No such channel.", nick)
+      this.sendMessage(out, "No such channel.", msg.nick.get)
     } else {
       this.sendData(out, "PART " + channel + " :" + partMessage)
     }
@@ -593,10 +593,10 @@ Beep boop."""
    * Sends irchelgmessage.txt to a recipient.
    */
 
-  def helpNewUser(lineString: String, out: BufferedWriter) = {
-    val channelName = lineString.split("JOIN ")(1).dropWhile(_ == ':')
+  def helpNewUser(msg: Message, out: BufferedWriter) = {
+    val channelName = msg.raw.split("JOIN ")(1).dropWhile(_ == ':')
     if (tutorialModeConversations.contains(channelName)) {
-      val recipient = lineString.dropWhile(_ == ':').takeWhile(_ != '!')
+      val recipient = msg.raw.dropWhile(_ == ':').takeWhile(_ != '!')
       println("Tutoring user " + recipient + " at " + channelName + ".")
       conversations.keys.find(_.recipient == channelName).get.fileReader(out, recipient, "irchelpmessage.txt")
     }
@@ -605,15 +605,15 @@ Beep boop."""
    * Puts channel in tutorial mode. When in tutorial mode, the channel automatically sends irchelpmessage
    * to every user joining the channel.
    */
-  def addTutorialModeChannel(lineString: String, receivedFrom: String, out: BufferedWriter) = {
-    val channelToTutor = lineString.split("!addtutorial ").lift(1).getOrElse("empty")
+  def addTutorialModeChannel(msg: Message, out: BufferedWriter) = {
+    val channelToTutor = msg.raw.split("!addtutorial ").lift(1).getOrElse("empty")
     if (channelToTutor != "empty" && !this.tutorialModeConversations.contains(channelToTutor)) {
       this.tutorialModeConversations += channelToTutor
-      this.sendMessage(out, channelToTutor + " has been added to tutored channels.", receivedFrom)
+      this.sendMessage(out, channelToTutor + " has been added to tutored channels.", msg.address)
     } else if (channelToTutor == "empty") {
-      this.sendMessage(out, "Syntax error", receivedFrom)
+      this.sendMessage(out, "Syntax error", msg.address)
     } else {
-      this.sendMessage(out, channelToTutor + " is already tutored.", receivedFrom)
+      this.sendMessage(out, channelToTutor + " is already tutored.", msg.address)
     }
   }
 
@@ -621,15 +621,15 @@ Beep boop."""
    * Removes tutorial mode from a channel.
    */
 
-  def removeTutorialModeChannel(lineString: String, receivedFrom: String, out: BufferedWriter) = {
-    val channelToRemove = lineString.split("!removetutorial ").lift(1).getOrElse("empty")
+  def removeTutorialModeChannel(msg: Message, out: BufferedWriter) = {
+    val channelToRemove = msg.raw.split("!removetutorial ").lift(1).getOrElse("empty")
     if (channelToRemove != "empty" && this.tutorialModeConversations.contains(channelToRemove)) {
       this.tutorialModeConversations -= channelToRemove
-      this.sendMessage(out, channelToRemove + " has been removed from tutored channels.", receivedFrom)
+      this.sendMessage(out, channelToRemove + " has been removed from tutored channels.", msg.address)
     } else if (channelToRemove == "empty") {
-      this.sendMessage(out, "Syntax error", receivedFrom)
+      this.sendMessage(out, "Syntax error", msg.address)
     } else {
-      this.sendMessage(out, channelToRemove + " is not tutored.", receivedFrom)
+      this.sendMessage(out, channelToRemove + " is not tutored.", msg.address)
     }
   }
 
