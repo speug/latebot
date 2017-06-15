@@ -7,27 +7,27 @@ import scala.collection.mutable.Buffer
 import scala.io._
 import scala.collection.mutable.Queue
 
-class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedWriter, homeChannel: String, bot: latebot, historySize: Int, messageHistory: Queue[(Long, String)]) extends Conversation(recipient, incoming, out, homeChannel, bot, historySize, messageHistory) {
+class Channel(recipient: String, incoming: Queue[Message], out: BufferedWriter, homeChannel: String, bot: latebot, historySize: Int, messageHistory: Queue[Message]) extends Conversation(recipient, incoming, out, homeChannel, bot, historySize, messageHistory) {
 
   private val chatters = Buffer[Chatter]()
-  
-  def takeLine(line: (Long,String), nick: String): Unit = {
-    if(!this.chatters.find(_.nick == nick).isDefined){
-      val newChatter = new Chatter(nick, this)
+
+  def takeLine(msg: Message): Unit = {
+    if(!this.chatters.find(_.nick == msg.nick.get).isDefined){
+      val newChatter = new Chatter(msg.nick.get, this)
       this.chatters += newChatter
-      newChatter.takeLine(line)
+      newChatter.takeLine(msg)
     } else {
-      val chatter = this.chatters.find(_.nick == nick).get
-      chatter.takeLine(line)
-      if(chatter.isSpam(line)){
+      val chatter = this.chatters.find(_.nick == msg.nick.get).get
+      chatter.takeLine(msg)
+      if(chatter.isSpam(msg)){
         this.spam(chatter, out)
       }
     }
-    this.addToHistory(line)
+    this.addToHistory(msg)
   }
-   
 
-   def spam(who: Chatter, out: BufferedWriter) = { 
+
+   def spam(who: Chatter, out: BufferedWriter) = {
    this.bot.addToBlackList(who)
    this.bot.blackList(who) match {
      case 0 =>
@@ -37,7 +37,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     }
    who.flushQueue()
    }
-  
+
   def warnSpammer(spammer: Chatter, out: BufferedWriter) = {
     /*
     println("Warning " + spammer.nick)
@@ -46,7 +46,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     */
     this.sendMessage(out, "Warning " + spammer.nick + " at " + this.recipient, "speug")
   }
-  
+
   def kickSpammer(channel: String, spammer: Chatter, out: BufferedWriter) = {
     /*
     println("Kicking " + spammer.nick)
@@ -55,7 +55,7 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     */
     this.sendMessage(out, "But I want to kick " + spammer.nick + " at " + this.recipient, "speug")
   }
-  
+
   def kickBan(channel: String, spammer: Chatter, out: BufferedWriter) = {
     /*
     println("Kickbanning " + spammer.nick)
@@ -65,9 +65,9 @@ class Channel(recipient: String, incoming: Queue[(Long, String)], out: BufferedW
     */
     this.sendMessage(out, "Banning " + spammer.nick + " at " + this.recipient, "speug")
   }
-  
+
   def confirmQuote(toBeConfirmed: String) = {
     println("Cannot confirm quote; this is a Conversation.")
   }
-  
+
 }
